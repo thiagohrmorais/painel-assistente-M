@@ -17,8 +17,8 @@
             --card-foreground: 210 40% 98%;
             --popover: 222.2 84% 4.9%;
             --popover-foreground: 210 40% 98%;
-            --primary: 210 40% 98%;
-            --primary-foreground: 222.2 47.4% 11.2%;
+            --primary: 217, 91%, 60%; /* Azul Vibrante */
+            --primary-foreground: 210 40% 98%;
             --secondary: 217.2 32.6% 17.5%;
             --secondary-foreground: 210 40% 98%;
             --muted: 217.2 32.6% 17.5%;
@@ -53,7 +53,7 @@
         .toast-error { background-color: #ef4444; color: white; }
         .skeleton { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; background-color: hsl(var(--muted));}
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
-        .notification-dot { width: 10px; height: 10px; background-color: #3b82f6; border-radius: 50%; border: 2px solid hsl(var(--card)); position: absolute; top: 0.5rem; right: 0.5rem; }
+        .notification-dot { width: 10px; height: 10px; background-color: hsl(var(--primary)); border-radius: 50%; border: 2px solid hsl(var(--card)); position: absolute; top: 0.5rem; right: 0.5rem; }
     </style>
      <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -82,7 +82,7 @@
                     <label for="password" class="block mb-2 text-sm font-medium">Senha</label>
                     <input type="password" id="password" name="password" required class="w-full p-2 rounded-md bg-input border border-border focus:ring-primary focus:border-primary" placeholder="••••••••">
                 </div>
-                <button type="submit" id="login-btn" class="w-full btn-primary font-semibold py-2 px-4 rounded-md">Entrar</button>
+                <button type="submit" id="login-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-md">Entrar</button>
             </form>
         </div>
     </div>
@@ -127,7 +127,7 @@
                 </div>
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <div class="card p-6 rounded-lg"><h3 class="font-bold mb-4">Novos Usuários (Últimos 7 dias)</h3><canvas id="novos-usuarios-chart"></canvas></div>
-                    <div class="card p-6 rounded-lg"><h3 class="font-bold mb-4">Lembretes Agendados</h3><div id="lembretes-dashboard-list" class="max-h-80 overflow-y-auto"></div></div>
+                    <div class="card p-6 rounded-lg"><h3 class="font-bold mb-4">Atividade Recente</h3><div id="atividade-recente-list" class="max-h-80 overflow-y-auto"></div></div>
                 </div>
             </div>
 
@@ -146,14 +146,14 @@
                     <div id="chat-panel" class="w-2/3 flex flex-col">
                         <div id="chat-welcome" class="flex-1 flex flex-col items-center justify-center text-muted-foreground"><i data-lucide="messages-square" class="w-16 h-16 mb-4"></i><p>Selecione um usuário para ver a conversa</p></div>
                         <div id="chat-history-container" class="flex-1 p-4 overflow-y-auto hidden"></div>
-                        <div id="chat-input-container" class="p-4 border-t border-border hidden"><form id="admin-message-form" class="flex items-center space-x-2"><input type="text" id="admin-message-input" class="w-full p-2 rounded-md bg-input border-border" placeholder="Digite uma mensagem..." autocomplete="off"><button type="submit" class="btn-primary p-2 rounded-md"><i data-lucide="send"></i></button></form></div>
+                        <div id="chat-input-container" class="p-4 border-t border-border hidden"><form id="admin-message-form" class="flex items-center space-x-2"><input type="text" id="admin-message-input" class="w-full p-2 rounded-md bg-input border-border" placeholder="Digite uma mensagem..." autocomplete="off"><button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white p-2 rounded-md"><i data-lucide="send"></i></button></form></div>
                     </div>
                 </div>
             </div>
 
             <div id="perfis-view" class="view hidden">
-                 <div class="flex justify-between items-center mb-6"><h2 class="text-3xl font-bold">Perfis de IA dos Clientes</h2><button class="btn-primary flex items-center space-x-2 px-4 py-2 rounded-md" onclick="openEditProfileModal()"><i data-lucide="plus"></i><span>Criar Perfil</span></button></div>
-                <div class="card rounded-lg overflow-hidden"><table class="w-full text-left"><thead class="table-header"><tr><th class="p-4">ID do Cliente</th><th class="p-4">Resumo do Perfil</th><th class="p-4 text-right">Ações</th></tr></thead><tbody id="perfis-table-body"></tbody></table></div>
+                 <div class="flex justify-between items-center mb-6"><h2 class="text-3xl font-bold">Perfis de IA dos Clientes</h2><button class="bg-blue-600 hover:bg-blue-700 text-white flex items-center space-x-2 px-4 py-2 rounded-md" onclick="openEditProfileModal()"><i data-lucide="plus"></i><span>Criar Perfil</span></button></div>
+                <div class="card rounded-lg overflow-hidden"><table class="w-full text-left"><thead class="table-header"><tr><th class="p-4">ID do Cliente</th><th class="p-4">Resumo Inteligente do Perfil</th><th class="p-4 text-right">Ações</th></tr></thead><tbody id="perfis-table-body"></tbody></table></div>
             </div>
 
             <div id="lembretes-view" class="view hidden">
@@ -164,8 +164,8 @@
     </div>
 
     <!-- Modais -->
-    <div id="edit-user-modal" class="fixed inset-0 modal-backdrop flex items-center justify-center hidden z-50"><div class="modal-content card rounded-lg w-full max-w-md p-6"><h3 class="text-xl font-bold mb-4">Editar Usuário</h3><p id="modal-user-id" class="text-sm text-muted-foreground mb-4"></p><form id="edit-user-form"><div class="mb-4"><label for="plano" class="block mb-2 text-sm font-medium">Plano</label><select id="plano" name="plano" class="w-full p-2 rounded-md bg-input border border-border"><option value="GRATUITO">GRATUITO</option><option value="PRO">PRO</option></select></div><div class="mb-6"><label for="contagem_diaria" class="block mb-2 text-sm font-medium">Contagem Diária</label><input type="number" id="contagem_diaria" name="contagem_diaria" class="w-full p-2 rounded-md bg-input border border-border"></div><div class="flex justify-end space-x-4"><button type="button" class="btn-secondary px-4 py-2 rounded-md" onclick="closeModal('edit-user-modal')">Cancelar</button><button type="submit" class="btn-primary px-4 py-2 rounded-md">Salvar</button></div></form></div></div>
-    <div id="edit-profile-modal" class="fixed inset-0 modal-backdrop flex items-center justify-center hidden z-50"><div class="modal-content card rounded-lg w-full max-w-2xl p-6"><h3 id="profile-modal-title" class="text-xl font-bold mb-4"></h3><form id="edit-profile-form"><div class="space-y-4 max-h-[60vh] overflow-y-auto"><input type="hidden" id="profile-original-id"><div class="space-y-2"><label for="profile-client-id" class="font-semibold">Client ID (JID)</label><input type="text" id="profile-client-id" class="w-full p-2 rounded-md bg-input border-border font-mono text-sm" placeholder="Ex: 5511999998888@s.whatsapp.net" required></div><div class="space-y-2"><label for="modal-profile-json" class="font-semibold">Perfil JSON</label><textarea id="modal-profile-json" class="w-full p-2 h-40 rounded-md bg-input border-border font-mono text-sm"></textarea></div><div class="space-y-2"><label for="modal-profile-history" class="font-semibold">Histórico de Interação</label><textarea id="modal-profile-history" class="w-full p-2 h-24 rounded-md bg-input border-border font-mono text-sm"></textarea></div></div><div class="flex justify-end mt-6 space-x-4"><button type="button" class="btn-secondary px-4 py-2 rounded-md" onclick="closeModal('edit-profile-modal')">Cancelar</button><button type="submit" class="btn-primary px-4 py-2 rounded-md">Salvar Perfil</button></div></form></div></div>
+    <div id="edit-user-modal" class="fixed inset-0 modal-backdrop flex items-center justify-center hidden z-50"><div class="modal-content card rounded-lg w-full max-w-md p-6"><h3 class="text-xl font-bold mb-4">Editar Usuário</h3><p id="modal-user-id" class="text-sm text-muted-foreground mb-4"></p><form id="edit-user-form"><div class="mb-4"><label for="plano" class="block mb-2 text-sm font-medium">Plano</label><select id="plano" name="plano" class="w-full p-2 rounded-md bg-input border border-border"><option value="GRATUITO">GRATUITO</option><option value="PRO">PRO</option></select></div><div class="mb-6"><label for="contagem_diaria" class="block mb-2 text-sm font-medium">Contagem Diária</label><input type="number" id="contagem_diaria" name="contagem_diaria" class="w-full p-2 rounded-md bg-input border border-border"></div><div class="flex justify-end space-x-4"><button type="button" class="btn-secondary px-4 py-2 rounded-md" onclick="closeModal('edit-user-modal')">Cancelar</button><button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md">Salvar</button></div></form></div></div>
+    <div id="edit-profile-modal" class="fixed inset-0 modal-backdrop flex items-center justify-center hidden z-50"><div class="modal-content card rounded-lg w-full max-w-2xl p-6"><h3 id="profile-modal-title" class="text-xl font-bold mb-4"></h3><form id="edit-profile-form"><div class="space-y-4 max-h-[60vh] overflow-y-auto"><input type="hidden" id="profile-original-id"><div class="space-y-2"><label for="profile-client-id" class="font-semibold">Client ID (JID)</label><input type="text" id="profile-client-id" class="w-full p-2 rounded-md bg-input border-border font-mono text-sm" placeholder="Ex: 5511999998888@s.whatsapp.net" required></div><div class="space-y-2"><label for="modal-profile-json" class="font-semibold">Perfil JSON</label><textarea id="modal-profile-json" class="w-full p-2 h-40 rounded-md bg-input border-border font-mono text-sm"></textarea></div><div class="space-y-2"><label for="modal-profile-history" class="font-semibold">Histórico de Interação</label><textarea id="modal-profile-history" class="w-full p-2 h-24 rounded-md bg-input border-border font-mono text-sm"></textarea></div></div><div class="flex justify-end mt-6 space-x-4"><button type="button" class="btn-secondary px-4 py-2 rounded-md" onclick="closeModal('edit-profile-modal')">Cancelar</button><button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md">Salvar Perfil</button></div></form></div></div>
     <div id="delete-confirm-modal" class="fixed inset-0 modal-backdrop flex items-center justify-center hidden z-50"><div class="modal-content card rounded-lg w-full max-w-md p-6"><h3 class="text-xl font-bold mb-2">Confirmar Exclusão</h3><p id="delete-confirm-text" class="text-muted-foreground mb-6"></p><div class="flex justify-end space-x-4"><button type="button" class="btn-secondary px-4 py-2 rounded-md" onclick="closeModal('delete-confirm-modal')">Cancelar</button><button type="button" id="confirm-delete-btn" class="btn-destructive px-4 py-2 rounded-md">Confirmar Exclusão</button></div></div></div>
 
     <script>
@@ -344,9 +344,8 @@
         // VIEW: DASHBOARD
         // ===================================================================================
         async function loadDashboardData() {
-            const { data: usuarios, error: uErr } = await supabase.from('usuarios_planos').select('plano, contagem_diaria, created_at');
-            const { data: lembretes, error: lErr } = await supabase.from('lembretes').select('user_jid, reminder_message, send_at, status').eq('status', 'pendente').order('send_at');
-            if (uErr || lErr) throw uErr || lErr;
+            const { data: usuarios, error: uErr } = await supabase.from('usuarios_planos').select('user_jid, plano, contagem_diaria, created_at, ultima_mensagem_em').order('ultima_mensagem_em', { ascending: false });
+            if (uErr) throw uErr;
             
             const proUsers = usuarios.filter(u => u.plano === 'PRO');
             const mrr = (proUsers.length * PLANO_PRO_PRECO).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -358,7 +357,7 @@
             document.getElementById('msgs-hoje').textContent = totalMsgsHoje;
 
             renderNovosUsuariosChart(usuarios);
-            renderLembretesDashboard(lembretes);
+            renderAtividadeRecente(usuarios);
         }
 
         function renderNovosUsuariosChart(usuarios) {
@@ -393,15 +392,15 @@
             });
         }
         
-        function renderLembretesDashboard(lembretes) {
-            const listEl = document.getElementById('lembretes-dashboard-list');
+        function renderAtividadeRecente(usuarios) {
+            const listEl = document.getElementById('atividade-recente-list');
             listEl.innerHTML = '';
-            if (lembretes.length === 0) {
-                listEl.innerHTML = `<div class="text-center text-muted-foreground p-8">Nenhum lembrete pendente.</div>`;
+            if (usuarios.length === 0) {
+                listEl.innerHTML = `<div class="text-center text-muted-foreground p-8">Nenhuma atividade recente.</div>`;
                 return;
             }
-            lembretes.slice(0, 5).forEach(l => {
-                listEl.innerHTML += `<div class="p-2 border-b border-border text-sm"><p class="font-semibold">${l.reminder_message}</p><p class="text-xs text-muted-foreground">${l.user_jid} - ${new Date(l.send_at).toLocaleString('pt-BR')}</p></div>`;
+            usuarios.slice(0, 5).forEach(u => {
+                listEl.innerHTML += `<div class="p-2 border-b border-border text-sm"><p class="font-semibold truncate">${u.user_jid}</p><p class="text-xs text-muted-foreground">Última msg: ${new Date(u.ultima_mensagem_em).toLocaleString('pt-BR')}</p></div>`;
             });
         }
 
@@ -431,7 +430,7 @@
                         <td class="p-4"><span class="px-2 py-1 rounded-full text-xs font-semibold ${user.plano === 'PRO' ? 'bg-green-400 text-green-900' : 'bg-blue-400 text-blue-900'}">${user.plano}</span></td>
                         <td class="p-4 text-center">${user.contagem_diaria}</td>
                         <td class="p-4">${new Date(user.ultima_mensagem_em).toLocaleString('pt-BR')}</td>
-                        <td class="p-4 text-right"><button class="p-1 hover:text-primary" onclick="openEditUserModal('${user.user_jid}')"><i data-lucide="file-pen-line"></i></button><button class="p-1 hover:text-destructive" onclick="openDeleteModal('user', '${user.user_jid}')"><i data-lucide="trash-2"></i></button></td>
+                        <td class="p-4 text-right"><button class="p-1 hover:text-blue-500" onclick="openEditUserModal('${user.user_jid}')"><i data-lucide="file-pen-line"></i></button><button class="p-1 hover:text-destructive" onclick="openDeleteModal('user', '${user.user_jid}')"><i data-lucide="trash-2"></i></button></td>
                     </tr>`;
             });
             lucide.createIcons();
@@ -524,8 +523,14 @@
         // ===================================================================================
         async function loadPerfisData() {
             renderTableSkeleton('perfis-table-body', 3);
-            const { data, error } = await supabase.from('clientprofile').select('*').order('client_id', { ascending: false });
-            if (error) throw error;
+            const { data, error } = await supabase.rpc('get_profile_summaries');
+            if (error) {
+                // Heurística para detectar se a função não foi criada
+                if (error.code === '42883') { 
+                    throw new Error("A função 'get_profile_summaries' não foi encontrada. Verifique as instruções e execute o arquivo .sql no Supabase.");
+                }
+                throw error;
+            }
             renderPerfisTable(data);
         }
 
@@ -537,12 +542,11 @@
                 return;
             }
             perfis.forEach(p => {
-                const summary = p.perfil_json ? JSON.stringify(p.perfil_json).substring(0, 50) + '...' : '<i>Vazio</i>';
                 tableBody.innerHTML += `
                     <tr class="table-row border-b border-border">
                         <td class="p-4 font-mono text-xs">${p.client_id}</td>
-                        <td class="p-4 font-mono text-xs text-muted-foreground">${summary}</td>
-                        <td class="p-4 text-right"><button class="p-1 hover:text-primary" onclick="openEditProfileModal('${p.client_id}')"><i data-lucide="file-pen-line"></i></button><button class="p-1 hover:text-destructive" onclick="openDeleteModal('profile', '${p.client_id}')"><i data-lucide="trash-2"></i></button></td>
+                        <td class="p-4 text-sm text-muted-foreground italic">${p.summary}</td>
+                        <td class="p-4 text-right"><button class="p-1 hover:text-blue-500" onclick="openEditProfileModal('${p.client_id}')"><i data-lucide="file-pen-line"></i></button><button class="p-1 hover:text-destructive" onclick="openDeleteModal('profile', '${p.client_id}')"><i data-lucide="trash-2"></i></button></td>
                     </tr>`;
             });
             lucide.createIcons();
@@ -702,7 +706,6 @@
                 });
                 if (!response.ok) throw new Error(`Servidor respondeu com status ${response.status}`);
                 input.value = '';
-                // Não precisa de toast, a mensagem vai aparecer no chat via realtime.
             } catch (error) {
                 showToast(`Erro ao enviar mensagem: ${error.message}`, 'error');
             } finally {
@@ -767,4 +770,3 @@
     </script>
 </body>
 </html>
-
