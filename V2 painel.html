@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel de Controle | M Assistente</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root {
+            --background: 222.2 84% 4.9%;
+            --foreground: 210 40% 98%;
+            --card: 222.2 84% 4.9%;
+            --card-foreground: 210 40% 98%;
+            --popover: 222.2 84% 4.9%;
+            --popover-foreground: 210 40% 98%;
+            --primary: 210 40% 98%;
+            --primary-foreground: 222.2 47.4% 11.2%;
+            --secondary: 217.2 32.6% 17.5%;
+            --secondary-foreground: 210 40% 98%;
+            --muted: 217.2 32.6% 17.5%;
+            --muted-foreground: 215 20.2% 65.1%;
+            --accent: 217.2 32.6% 17.5%;
+            --accent-foreground: 210 40% 98%;
+            --destructive: 0 62.8% 30.6%;
+            --destructive-foreground: 210 40% 98%;
+            --border: 217.2 32.6% 17.5%;
+            --input: 217.2 32.6% 17.5%;
+            --ring: 212.7 26.8% 83.9%;
+        }
+        body { background-color: hsl(var(--background)); color: hsl(var(--foreground)); font-family: 'Inter', sans-serif; }
+        .sidebar { background-color: hsl(var(--card)); border-right: 1px solid hsl(var(--border)); }
+        .card { background-color: hsl(var(--card)); border: 1px solid hsl(var(--border)); }
+        .table-header { background-color: hsl(var(--secondary)); }
+        .table-row:hover { background-color: hsl(var(--accent)); }
+        .btn-primary { background-color: hsl(var(--primary)); color: hsl(var(--primary-foreground)); }
+        .btn-secondary { background-color: hsl(var(--secondary)); color: hsl(var(--secondary-foreground)); }
+        .btn-destructive { background-color: hsl(var(--destructive)); color: hsl(var(--destructive-foreground));}
+        .btn-primary:disabled { opacity: 0.7; cursor: not-allowed; }
+        .modal-backdrop { background-color: rgba(0,0,0,0.7); }
+        .modal-content { background-color: hsl(var(--background)); }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: hsl(var(--secondary)); }
+        ::-webkit-scrollbar-thumb { background: hsl(var(--muted)); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: hsl(var(--accent-foreground)); }
+        #toast-container { position: fixed; top: 1.5rem; right: 1.5rem; z-index: 100; display: flex; flex-direction: column; gap: 0.75rem; }
+        .toast { display: flex; align-items: center; padding: 1rem; border-radius: 0.5rem; box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1); transform: translateX(120%); opacity: 0; transition: all 0.3s ease-in-out; }
+        .toast.show { transform: translateX(0); opacity: 1; }
+        .toast-success { background-color: #22c55e; color: white; }
+        .toast-error { background-color: #ef4444; color: white; }
+        .skeleton { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; background-color: hsl(var(--muted));}
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
+        .notification-dot { width: 10px; height: 10px; background-color: #3b82f6; border-radius: 50%; border: 2px solid hsl(var(--card)); position: absolute; top: 0.5rem; right: 0.5rem; }
+    </style>
+     <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="antialiased">
+    <div id="toast-container"></div>
+
+    <!-- Container de Autenticação -->
+    <div id="auth-container" class="flex items-center justify-center h-screen">
+        <div class="w-full max-w-md">
+            <form id="login-form" class="card rounded-lg p-8 space-y-6">
+                <div class="text-center">
+                    <div class="flex items-center justify-center space-x-2 mb-2">
+                        <div class="w-10 h-10 bg-white text-black rounded-lg flex items-center justify-center font-bold text-2xl">M</div>
+                        <h1 class="text-2xl font-bold">M Assistente</h1>
+                    </div>
+                    <p class="text-muted-foreground">Login do Administrador</p>
+                </div>
+
+                <div>
+                    <label for="email" class="block mb-2 text-sm font-medium">Email</label>
+                    <input type="email" id="email" name="email" required class="w-full p-2 rounded-md bg-input border border-border focus:ring-primary focus:border-primary" placeholder="seu@email.com">
+                </div>
+                <div>
+                    <label for="password" class="block mb-2 text-sm font-medium">Senha</label>
+                    <input type="password" id="password" name="password" required class="w-full p-2 rounded-md bg-input border border-border focus:ring-primary focus:border-primary" placeholder="••••••••">
+                </div>
+                <button type="submit" id="login-btn" class="w-full btn-primary font-semibold py-2 px-4 rounded-md">Entrar</button>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Container Principal da Aplicação -->
+    <div id="app-container" class="flex h-screen hidden">
+        <aside class="sidebar w-64 flex-shrink-0 p-4 flex flex-col justify-between">
+            <div>
+                <div class="flex items-center space-x-2 mb-8">
+                    <div class="w-8 h-8 bg-white text-black rounded-lg flex items-center justify-center font-bold text-xl">M</div>
+                    <h1 class="text-xl font-bold">M Assistente</h1>
+                </div>
+                <nav class="flex flex-col space-y-2">
+                    <a href="#dashboard" class="nav-link flex items-center space-x-2 p-2 rounded-md bg-secondary text-white"><i data-lucide="layout-dashboard"></i><span>Dashboard</span></a>
+                    <a href="#usuarios" class="nav-link flex items-center space-x-2 p-2 rounded-md hover:bg-secondary"><i data-lucide="users"></i><span>Usuários</span></a>
+                    <a href="#conversas" class="nav-link flex items-center space-x-2 p-2 rounded-md hover:bg-secondary"><i data-lucide="message-square-text"></i><span>Conversas</span></a>
+                    <a href="#perfis" class="nav-link flex items-center space-x-2 p-2 rounded-md hover:bg-secondary"><i data-lucide="brain-circuit"></i><span>Perfis de IA</span></a>
+                    <a href="#lembretes" class="nav-link flex items-center space-x-2 p-2 rounded-md hover:bg-secondary"><i data-lucide="bell"></i><span>Lembretes</span></a>
+                </nav>
+            </div>
+            <div>
+                 <div class="border-t border-border pt-4 text-sm">
+                    <p id="user-email" class="font-semibold truncate">carregando...</p>
+                    <p class="text-xs text-muted-foreground">Administrador</p>
+                 </div>
+                 <button id="logout-btn" class="w-full mt-4 btn-secondary flex items-center justify-center space-x-2 p-2 rounded-md text-sm">
+                    <i data-lucide="log-out" class="w-4 h-4"></i><span>Sair</span>
+                 </button>
+            </div>
+        </aside>
+
+        <main class="flex-1 overflow-y-auto p-8">
+            <div id="loader" class="flex items-center justify-center h-full"><div class="flex flex-col items-center"><i data-lucide="loader-circle" class="animate-spin h-12 w-12 mb-4"></i><p>Conectando ao Supabase...</p></div></div>
+
+            <div id="dashboard-view" class="view hidden">
+                <h2 class="text-3xl font-bold mb-6">Dashboard</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+                    <div class="card p-6 rounded-lg"><h3 class="text-muted-foreground text-sm">Total de Usuários</h3><p id="total-usuarios" class="text-3xl font-bold">-</p></div>
+                    <div class="card p-6 rounded-lg"><h3 class="text-muted-foreground text-sm">Usuários PRO</h3><p id="usuarios-pro" class="text-3xl font-bold">-</p></div>
+                    <div class="card p-6 rounded-lg"><h3 class="text-muted-foreground text-sm">Receita Mensal (MRR)</h3><p id="receita-mensal" class="text-3xl font-bold">R$ --</p></div>
+                    <div class="card p-6 rounded-lg"><h3 class="text-muted-foreground text-sm">Msgs Trocadas (Hoje)</h3><p id="msgs-hoje" class="text-3xl font-bold">-</p></div>
+                </div>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="card p-6 rounded-lg"><h3 class="font-bold mb-4">Novos Usuários (Últimos 7 dias)</h3><canvas id="novos-usuarios-chart"></canvas></div>
+                    <div class="card p-6 rounded-lg"><h3 class="font-bold mb-4">Lembretes Agendados</h3><div id="lembretes-dashboard-list" class="max-h-80 overflow-y-auto"></div></div>
+                </div>
+            </div>
+
+            <div id="usuarios-view" class="view hidden">
+                <div class="flex justify-between items-center mb-6"><h2 class="text-3xl font-bold">Gerenciador de Usuários</h2><input type="text" id="user-search" placeholder="Buscar por JID..." class="p-2 rounded-md bg-input border border-border w-64"></div>
+                <div class="card rounded-lg overflow-hidden"><table class="w-full text-left"><thead class="table-header"><tr><th class="p-4">ID do Usuário (JID)</th><th class="p-4">Plano</th><th class="p-4">Contagem Diária</th><th class="p-4">Última Mensagem</th><th class="p-4 text-right">Ações</th></tr></thead><tbody id="usuarios-table-body"></tbody></table></div>
+            </div>
+            
+            <div id="conversas-view" class="view hidden h-full">
+                <h2 class="text-3xl font-bold mb-6">Histórico de Conversas</h2>
+                <div class="card rounded-lg h-[calc(100%-4.5rem)] flex">
+                    <div class="w-1/3 border-r border-border overflow-y-auto">
+                        <div class="p-2 sticky top-0 bg-secondary z-10"><input type="text" id="convo-search" placeholder="Buscar usuário..." class="p-2 w-full rounded-md bg-input border border-border"></div>
+                        <ul id="convo-user-list" class="p-2"></ul>
+                    </div>
+                    <div id="chat-panel" class="w-2/3 flex flex-col">
+                        <div id="chat-welcome" class="flex-1 flex flex-col items-center justify-center text-muted-foreground"><i data-lucide="messages-square" class="w-16 h-16 mb-4"></i><p>Selecione um usuário para ver a conversa</p></div>
+                        <div id="chat-history-container" class="flex-1 p-4 overflow-y-auto hidden"></div>
+                        <div id="chat-input-container" class="p-4 border-t border-border hidden"><form id="admin-message-form" class="flex items-center space-x-2"><input type="text" id="admin-message-input" class="w-full p-2 rounded-md bg-input border-border" placeholder="Digite uma mensagem..." autocomplete="off"><button type="submit" class="btn-primary p-2 rounded-md"><i data-lucide="send"></i></button></form></div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="perfis-view" class="view hidden">
+                 <div class="flex justify-between items-center mb-6"><h2 class="text-3xl font-bold">Perfis de IA dos Clientes</h2><button class="btn-primary flex items-center space-x-2 px-4 py-2 rounded-md" onclick="openEditProfileModal()"><i data-lucide="plus"></i><span>Criar Perfil</span></button></div>
+                <div class="card rounded-lg overflow-hidden"><table class="w-full text-left"><thead class="table-header"><tr><th class="p-4">ID do Cliente</th><th class="p-4">Resumo do Perfil</th><th class="p-4 text-right">Ações</th></tr></thead><tbody id="perfis-table-body"></tbody></table></div>
+            </div>
+
+            <div id="lembretes-view" class="view hidden">
+                <h2 class="text-3xl font-bold mb-6">Lembretes Agendados</h2>
+                <div class="card rounded-lg overflow-hidden"><table class="w-full text-left"><thead class="table-header"><tr><th class="p-4">ID do Usuário</th><th class="p-4">Mensagem</th><th class="p-4">Data de Envio</th><th class="p-4">Status</th><th class="p-4 text-right">Ações</th></tr></thead><tbody id="lembretes-table-body"></tbody></table></div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modais -->
+    <div id="edit-user-modal" class="fixed inset-0 modal-backdrop flex items-center justify-center hidden z-50"><div class="modal-content card rounded-lg w-full max-w-md p-6"><h3 class="text-xl font-bold mb-4">Editar Usuário</h3><p id="modal-user-id" class="text-sm text-muted-foreground mb-4"></p><form id="edit-user-form"><div class="mb-4"><label for="plano" class="block mb-2 text-sm font-medium">Plano</label><select id="plano" name="plano" class="w-full p-2 rounded-md bg-input border border-border"><option value="GRATUITO">GRATUITO</option><option value="PRO">PRO</option></select></div><div class="mb-6"><label for="contagem_diaria" class="block mb-2 text-sm font-medium">Contagem Diária</label><input type="number" id="contagem_diaria" name="contagem_diaria" class="w-full p-2 rounded-md bg-input border border-border"></div><div class="flex justify-end space-x-4"><button type="button" class="btn-secondary px-4 py-2 rounded-md" onclick="closeModal('edit-user-modal')">Cancelar</button><button type="submit" class="btn-primary px-4 py-2 rounded-md">Salvar</button></div></form></div></div>
+    <div id="edit-profile-modal" class="fixed inset-0 modal-backdrop flex items-center justify-center hidden z-50"><div class="modal-content card rounded-lg w-full max-w-2xl p-6"><h3 id="profile-modal-title" class="text-xl font-bold mb-4"></h3><form id="edit-profile-form"><div class="space-y-4 max-h-[60vh] overflow-y-auto"><input type="hidden" id="profile-original-id"><div class="space-y-2"><label for="profile-client-id" class="font-semibold">Client ID (JID)</label><input type="text" id="profile-client-id" class="w-full p-2 rounded-md bg-input border-border font-mono text-sm" placeholder="Ex: 5511999998888@s.whatsapp.net" required></div><div class="space-y-2"><label for="modal-profile-json" class="font-semibold">Perfil JSON</label><textarea id="modal-profile-json" class="w-full p-2 h-40 rounded-md bg-input border-border font-mono text-sm"></textarea></div><div class="space-y-2"><label for="modal-profile-history" class="font-semibold">Histórico de Interação</label><textarea id="modal-profile-history" class="w-full p-2 h-24 rounded-md bg-input border-border font-mono text-sm"></textarea></div></div><div class="flex justify-end mt-6 space-x-4"><button type="button" class="btn-secondary px-4 py-2 rounded-md" onclick="closeModal('edit-profile-modal')">Cancelar</button><button type="submit" class="btn-primary px-4 py-2 rounded-md">Salvar Perfil</button></div></form></div></div>
+    <div id="delete-confirm-modal" class="fixed inset-0 modal-backdrop flex items-center justify-center hidden z-50"><div class="modal-content card rounded-lg w-full max-w-md p-6"><h3 class="text-xl font-bold mb-2">Confirmar Exclusão</h3><p id="delete-confirm-text" class="text-muted-foreground mb-6"></p><div class="flex justify-end space-x-4"><button type="button" class="btn-secondary px-4 py-2 rounded-md" onclick="closeModal('delete-confirm-modal')">Cancelar</button><button type="button" id="confirm-delete-btn" class="btn-destructive px-4 py-2 rounded-md">Confirmar Exclusão</button></div></div></div>
+
+    <script>
+        // ===================================================================================
+        // CONFIGURAÇÃO
+        // ===================================================================================
+        const SUPABASE_URL = 'https://qedstcloovfgeblduykc.supabase.co'; 
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFlZHN0Y2xvb3ZmZ2VibGR1eWtjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUxMzk2MzQsImV4cCI6MjA3MDcxNTYzNH0.tq76Qk9pqwb1OutsLX79KgrQhIB8q2ekAcczwhHsxtU'; 
+        const PLANO_PRO_PRECO = 47.00;
+        const N8N_ADMIN_WEBHOOK_URL = 'COLE_AQUI_URL_DO_SEU_WEBHOOK_N8N_PARA_ENVIAR_MENSAGEM';
+        
+        let supabase;
+        let currentView = 'dashboard';
+        let allUsersCache = []; 
+        let convoUsersCache = [];
+        let selectedChatUserId = null;
+        
+        // ===================================================================================
+        // INICIALIZAÇÃO E AUTENTICAÇÃO
+        // ===================================================================================
+        document.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+            if (SUPABASE_URL.includes('COLE_A_URL')) {
+                document.getElementById('auth-container').innerHTML = `<div class="text-center text-destructive-foreground bg-destructive p-4 rounded-md max-w-md"><h3 class="font-bold text-lg">Configuração Incompleta!</h3><p>Abra o arquivo e insira a URL e a Chave Anon do seu projeto Supabase.</p></div>`;
+                return;
+            }
+            try {
+                supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                setupAuthentication();
+            } catch (error) {
+                console.error("Erro ao inicializar Supabase:", error);
+                showToast('Erro fatal ao conectar. Verifique o console.', 'error');
+            }
+        });
+
+        function setupAuthentication() {
+            const authContainer = document.getElementById('auth-container');
+            const appContainer = document.getElementById('app-container');
+            const loginForm = document.getElementById('login-form');
+            const loginBtn = document.getElementById('login-btn');
+
+            supabase.auth.getSession().then(({ data: { session } }) => {
+                if (session) {
+                    authContainer.classList.add('hidden');
+                    appContainer.classList.remove('hidden');
+                    initializeApp(session.user);
+                } else {
+                    authContainer.classList.remove('hidden');
+                    appContainer.classList.add('hidden');
+                }
+            });
+
+            loginForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                loginBtn.disabled = true;
+                loginBtn.textContent = 'Entrando...';
+                const email = e.target.email.value;
+                const password = e.target.password.value;
+                const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+
+                if (error) {
+                    showToast(error.message, 'error');
+                } else if (data.user) {
+                    authContainer.classList.add('hidden');
+                    appContainer.classList.remove('hidden');
+                    initializeApp(data.user);
+                }
+                loginBtn.disabled = false;
+                loginBtn.textContent = 'Entrar';
+            });
+            
+            supabase.auth.onAuthStateChange((_event, session) => {
+                if (!session) {
+                    location.reload();
+                }
+            });
+        }
+
+        async function initializeApp(user) {
+            document.getElementById('user-email').textContent = user.email;
+            document.getElementById('logout-btn').addEventListener('click', async () => {
+                await supabase.auth.signOut();
+            });
+            
+            const loader = document.getElementById('loader');
+            loader.classList.remove('hidden');
+            setupNavigation();
+            setupSearchListeners();
+            setupForms();
+            await loadView('dashboard');
+            setupRealtimeSubscriptions();
+            loader.classList.add('hidden');
+        }
+        
+        // ===================================================================================
+        // NAVEGAÇÃO E CARREGAMENTO DE VIEWS
+        // ===================================================================================
+        function setupNavigation() {
+            const navLinks = document.querySelectorAll('.nav-link');
+            navLinks.forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const viewId = link.getAttribute('href').substring(1);
+                    if (currentView === viewId) return;
+                    currentView = viewId;
+                    loadView(viewId);
+                    navLinks.forEach(l => l.classList.remove('bg-secondary', 'text-white'));
+                    link.classList.add('bg-secondary', 'text-white');
+                });
+            });
+        }
+
+        async function loadView(viewId) {
+            document.querySelectorAll('.view').forEach(v => v.classList.add('hidden'));
+            const viewEl = document.getElementById(`${viewId}-view`);
+            
+            try {
+                switch(viewId) {
+                    case 'dashboard': await loadDashboardData(); break;
+                    case 'usuarios': await loadUsuariosData(); break;
+                    case 'conversas': await loadConversasData(); break;
+                    case 'perfis': await loadPerfisData(); break;
+                    case 'lembretes': await loadLembretesData(); break;
+                }
+                viewEl.classList.remove('hidden');
+            } catch (error) {
+                console.error(`Erro ao carregar a view ${viewId}:`, error);
+                showToast(`Erro ao carregar dados: ${error.message}`, 'error');
+            }
+        }
+        
+        // ===================================================================================
+        // ATUALIZAÇÕES EM TEMPO REAL (REALTIME)
+        // ===================================================================================
+        function setupRealtimeSubscriptions() {
+            const channel = supabase.channel('public-changes');
+            channel
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'usuarios_planos' }, () => {
+                    if (['dashboard', 'usuarios', 'conversas'].includes(currentView)) {
+                        console.log('Realtime update on usuarios_planos triggered for view:', currentView);
+                        loadView(currentView);
+                    }
+                })
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'lembretes' }, () => {
+                    if (['dashboard', 'lembretes'].includes(currentView)) {
+                        console.log('Realtime update on lembretes triggered for view:', currentView);
+                        loadView(currentView);
+                    }
+                })
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'clientprofile' }, () => {
+                    if(currentView === 'perfis') {
+                         console.log('Realtime update on "clientprofile" triggered for view:', currentView);
+                         loadPerfisData();
+                    }
+                })
+                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'mai_chat_history' }, (payload) => {
+                    const sessionId = payload.new.session_id;
+                    const userIdMatch = sessionId.match(/(\d+@s\.whatsapp\.net)/);
+                    if (!userIdMatch) return;
+                    const userId = userIdMatch[0];
+
+                    if (currentView === 'conversas') {
+                        console.log('Realtime INSERT on mai_chat_history triggered for view:', currentView);
+                        if (userId === selectedChatUserId) {
+                            appendChatMessage(payload.new);
+                        } else {
+                            const userListItem = document.querySelector(`.convo-user-item[data-user-id="${userId}"] .notification-dot`);
+                            if(userListItem) userListItem.classList.remove('hidden');
+                        }
+                    }
+                })
+                .subscribe();
+        }
+
+        // ===================================================================================
+        // VIEW: DASHBOARD
+        // ===================================================================================
+        async function loadDashboardData() {
+            const { data: usuarios, error: uErr } = await supabase.from('usuarios_planos').select('plano, contagem_diaria, created_at');
+            const { data: lembretes, error: lErr } = await supabase.from('lembretes').select('user_jid, reminder_message, send_at, status').eq('status', 'pendente').order('send_at');
+            if (uErr || lErr) throw uErr || lErr;
+            
+            const proUsers = usuarios.filter(u => u.plano === 'PRO');
+            const mrr = (proUsers.length * PLANO_PRO_PRECO).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+            const totalMsgsHoje = usuarios.reduce((sum, u) => sum + u.contagem_diaria, 0);
+
+            document.getElementById('total-usuarios').textContent = usuarios.length;
+            document.getElementById('usuarios-pro').textContent = proUsers.length;
+            document.getElementById('receita-mensal').textContent = mrr;
+            document.getElementById('msgs-hoje').textContent = totalMsgsHoje;
+
+            renderNovosUsuariosChart(usuarios);
+            renderLembretesDashboard(lembretes);
+        }
+
+        function renderNovosUsuariosChart(usuarios) {
+            const today = new Date();
+            const last7Days = Array.from({ length: 7 }, (_, i) => {
+                const d = new Date(today);
+                d.setDate(today.getDate() - i);
+                return d.toISOString().split('T')[0];
+            }).reverse();
+
+            const userCounts = last7Days.map(day => {
+                return usuarios.filter(u => new Date(u.created_at).toISOString().startsWith(day)).length;
+            });
+            
+            const ctx = document.getElementById('novos-usuarios-chart').getContext('2d');
+            if (window.myChart) window.myChart.destroy();
+            window.myChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: last7Days.map(d => new Date(d + 'T12:00:00Z').toLocaleDateString('pt-BR', {day: '2-digit', month: '2-digit'})),
+                    datasets: [{
+                        label: 'Novos Usuários',
+                        data: userCounts,
+                        backgroundColor: 'hsla(var(--primary), 0.2)',
+                        borderColor: 'hsl(var(--primary))',
+                        borderWidth: 2,
+                        tension: 0.3,
+                        fill: true
+                    }]
+                },
+                options: { scales: { y: { beginAtZero: true, grid: { color: 'hsl(var(--border))' }, ticks: { color: 'hsl(var(--muted-foreground))', stepSize: 1 } }, x: { grid: { display: false }, ticks: { color: 'hsl(var(--muted-foreground))' } } }, plugins: { legend: { display: false } } }
+            });
+        }
+        
+        function renderLembretesDashboard(lembretes) {
+            const listEl = document.getElementById('lembretes-dashboard-list');
+            listEl.innerHTML = '';
+            if (lembretes.length === 0) {
+                listEl.innerHTML = `<div class="text-center text-muted-foreground p-8">Nenhum lembrete pendente.</div>`;
+                return;
+            }
+            lembretes.slice(0, 5).forEach(l => {
+                listEl.innerHTML += `<div class="p-2 border-b border-border text-sm"><p class="font-semibold">${l.reminder_message}</p><p class="text-xs text-muted-foreground">${l.user_jid} - ${new Date(l.send_at).toLocaleString('pt-BR')}</p></div>`;
+            });
+        }
+
+        // ===================================================================================
+        // VIEW: USUÁRIOS
+        // ===================================================================================
+        async function loadUsuariosData() {
+            renderTableSkeleton('usuarios-table-body', 5);
+            const { data, error } = await supabase.from('usuarios_planos').select('*').order('created_at', { ascending: false });
+            if (error) throw error;
+            allUsersCache = data;
+            document.getElementById('user-search').value = '';
+            renderUsuariosTable(data);
+        }
+
+        function renderUsuariosTable(users) {
+            const tableBody = document.getElementById('usuarios-table-body');
+            tableBody.innerHTML = '';
+            if (users.length === 0) {
+                tableBody.innerHTML = `<tr><td colspan="5" class="text-center p-8 text-muted-foreground">Nenhum usuário encontrado.</td></tr>`;
+                return;
+            }
+            users.forEach(user => {
+                tableBody.innerHTML += `
+                    <tr class="table-row border-b border-border">
+                        <td class="p-4 font-mono text-xs">${user.user_jid}</td>
+                        <td class="p-4"><span class="px-2 py-1 rounded-full text-xs font-semibold ${user.plano === 'PRO' ? 'bg-green-400 text-green-900' : 'bg-blue-400 text-blue-900'}">${user.plano}</span></td>
+                        <td class="p-4 text-center">${user.contagem_diaria}</td>
+                        <td class="p-4">${new Date(user.ultima_mensagem_em).toLocaleString('pt-BR')}</td>
+                        <td class="p-4 text-right"><button class="p-1 hover:text-primary" onclick="openEditUserModal('${user.user_jid}')"><i data-lucide="file-pen-line"></i></button><button class="p-1 hover:text-destructive" onclick="openDeleteModal('user', '${user.user_jid}')"><i data-lucide="trash-2"></i></button></td>
+                    </tr>`;
+            });
+            lucide.createIcons();
+        }
+        
+        // ===================================================================================
+        // VIEW: CONVERSAS
+        // ===================================================================================
+        async function loadConversasData() {
+            selectedChatUserId = null;
+            document.getElementById('chat-welcome').classList.remove('hidden');
+            document.getElementById('chat-history-container').classList.add('hidden');
+            document.getElementById('chat-input-container').classList.add('hidden');
+            
+            document.getElementById('convo-user-list').innerHTML = `<div class="p-2 space-y-2">${Array(5).fill('<div class="h-12 w-full skeleton rounded-md"></div>').join('')}</div>`;
+            const { data, error } = await supabase.from('usuarios_planos').select('user_jid, plano').order('ultima_mensagem_em', { ascending: false });
+            if (error) throw error;
+            convoUsersCache = data;
+            document.getElementById('convo-search').value = '';
+            renderConversasList(data);
+        }
+
+        function renderConversasList(users) {
+            const listEl = document.getElementById('convo-user-list');
+            listEl.innerHTML = '';
+            if (users.length === 0) {
+                listEl.innerHTML = `<div class="p-4 text-center text-muted-foreground text-sm">Nenhum usuário para mostrar.</div>`;
+                return;
+            }
+            users.forEach(user => {
+                listEl.innerHTML += `<li data-user-id="${user.user_jid}" class="convo-user-item p-3 rounded-md hover:bg-accent cursor-pointer border-b border-border relative"><p class="font-semibold truncate">${user.user_jid}</p><p class="text-xs ${user.plano === 'PRO' ? 'text-green-400' : 'text-blue-400'}">${user.plano}</p><div class="notification-dot hidden"></div></li>`;
+            });
+            document.querySelectorAll('.convo-user-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    const notificationDot = item.querySelector('.notification-dot');
+                    if (notificationDot) notificationDot.classList.add('hidden');
+                    
+                    document.querySelectorAll('.convo-user-item').forEach(i => i.classList.remove('bg-accent'));
+                    item.classList.add('bg-accent');
+                    selectedChatUserId = item.dataset.userId;
+                    fetchAndRenderChatHistory(selectedChatUserId);
+                });
+            });
+        }
+        
+        async function fetchAndRenderChatHistory(userId) {
+            document.getElementById('chat-welcome').classList.add('hidden');
+            const container = document.getElementById('chat-history-container');
+            const inputContainer = document.getElementById('chat-input-container');
+            container.innerHTML = `<div class="flex items-center justify-center h-full"><i data-lucide="loader-circle" class="animate-spin h-8 w-8"></i></div>`;
+            container.classList.remove('hidden');
+            inputContainer.classList.remove('hidden');
+            lucide.createIcons();
+
+            const { data, error } = await supabase.from('mai_chat_history').select('*').ilike('session_id', `%${userId}%`).order('created_at');
+            if(error) {
+                showToast(`Erro ao buscar chat: ${error.message}`, 'error');
+                container.innerHTML = `<div class="text-center text-destructive p-8">Erro ao carregar histórico.</div>`;
+                return;
+            }
+            container.innerHTML = '';
+            if (data.length === 0) {
+                 container.innerHTML = `<div class="flex-1 flex flex-col items-center justify-center text-muted-foreground"><i data-lucide="message-square-off" class="w-16 h-16 mb-4"></i><p>Nenhuma mensagem encontrada.</p></div>`;
+                 lucide.createIcons();
+                 return;
+            }
+            data.forEach(msg => appendChatMessage(msg, container));
+        }
+
+        function appendChatMessage(msg, container = null) {
+            if (!container) container = document.getElementById('chat-history-container');
+            
+            const isAI = msg.message && msg.message.type === 'ai';
+            const messageText = (msg.message && typeof msg.message.message === 'string')
+                ? msg.message.message.replace(/\[LIST:.*?\]/g, '[<i>Componente de Lista Ocultado</i>]')
+                : '[Mensagem inválida ou vazia]';
+
+            container.innerHTML += `
+                <div class="flex ${isAI ? 'justify-start' : 'justify-end'} mb-4">
+                    <div class="max-w-md p-3 rounded-lg ${isAI ? 'bg-secondary' : 'bg-primary text-primary-foreground'}">
+                        <p class="text-sm">${messageText}</p>
+                        <p class="text-xs opacity-70 mt-1 text-right">${new Date(msg.created_at).toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'})}</p>
+                    </div>
+                </div>`;
+            container.scrollTop = container.scrollHeight;
+        }
+
+        // ===================================================================================
+        // VIEW: PERFIS DE IA
+        // ===================================================================================
+        async function loadPerfisData() {
+            renderTableSkeleton('perfis-table-body', 3);
+            const { data, error } = await supabase.from('clientprofile').select('*').order('client_id', { ascending: false });
+            if (error) throw error;
+            renderPerfisTable(data);
+        }
+
+        function renderPerfisTable(perfis) {
+            const tableBody = document.getElementById('perfis-table-body');
+            tableBody.innerHTML = '';
+            if (perfis.length === 0) {
+                tableBody.innerHTML = `<tr><td colspan="3" class="text-center p-8 text-muted-foreground">Nenhum perfil de IA encontrado.</td></tr>`;
+                return;
+            }
+            perfis.forEach(p => {
+                const summary = p.perfil_json ? JSON.stringify(p.perfil_json).substring(0, 50) + '...' : '<i>Vazio</i>';
+                tableBody.innerHTML += `
+                    <tr class="table-row border-b border-border">
+                        <td class="p-4 font-mono text-xs">${p.client_id}</td>
+                        <td class="p-4 font-mono text-xs text-muted-foreground">${summary}</td>
+                        <td class="p-4 text-right"><button class="p-1 hover:text-primary" onclick="openEditProfileModal('${p.client_id}')"><i data-lucide="file-pen-line"></i></button><button class="p-1 hover:text-destructive" onclick="openDeleteModal('profile', '${p.client_id}')"><i data-lucide="trash-2"></i></button></td>
+                    </tr>`;
+            });
+            lucide.createIcons();
+        }
+        
+        // ===================================================================================
+        // VIEW: LEMBRETES
+        // ===================================================================================
+        async function loadLembretesData() {
+             renderTableSkeleton('lembretes-table-body', 5);
+             const { data, error } = await supabase.from('lembretes').select('*').order('send_at', { ascending: true });
+             if (error) throw error;
+             renderLembretesTable(data);
+        }
+
+        function renderLembretesTable(lembretes) {
+            const tableBody = document.getElementById('lembretes-table-body');
+            tableBody.innerHTML = '';
+            if (lembretes.length === 0) {
+                tableBody.innerHTML = `<tr><td colspan="5" class="text-center p-8 text-muted-foreground">Nenhum lembrete agendado.</td></tr>`;
+                return;
+            }
+            lembretes.forEach(l => {
+                const statusClass = l.status === 'enviado' ? 'bg-green-400 text-green-900' : (l.status === 'pendente' ? 'bg-yellow-400 text-yellow-900' : 'bg-red-400 text-red-900');
+                tableBody.innerHTML += `
+                    <tr class="table-row border-b border-border">
+                        <td class="p-4 font-mono text-xs">${l.user_jid}</td>
+                        <td class="p-4">${l.reminder_message}</td>
+                        <td class="p-4">${new Date(l.send_at).toLocaleString('pt-BR')}</td>
+                        <td class="p-4"><span class="px-2 py-1 rounded-full text-xs font-semibold ${statusClass}">${l.status}</span></td>
+                        <td class="p-4 text-right"><button class="p-1 hover:text-destructive" onclick="openDeleteModal('reminder', '${l.id}')"><i data-lucide="trash-2"></i></button></td>
+                    </tr>`;
+            });
+            lucide.createIcons();
+        }
+
+        // ===================================================================================
+        // LÓGICA DOS MODAIS E FORMULÁRIOS
+        // ===================================================================================
+        function setupSearchListeners() {
+            document.getElementById('user-search').addEventListener('input', e => {
+                const searchTerm = e.target.value.toLowerCase();
+                renderUsuariosTable(allUsersCache.filter(u => u.user_jid.toLowerCase().includes(searchTerm)));
+            });
+            document.getElementById('convo-search').addEventListener('input', e => {
+                const searchTerm = e.target.value.toLowerCase();
+                renderConversasList(convoUsersCache.filter(u => u.user_jid.toLowerCase().includes(searchTerm)));
+            });
+        }
+
+        function setupForms() {
+            document.getElementById('edit-user-form').addEventListener('submit', handleEditUserSubmit);
+            document.getElementById('edit-profile-form').addEventListener('submit', handleEditProfileSubmit);
+            document.getElementById('admin-message-form').addEventListener('submit', handleAdminMessageSend);
+        }
+        
+        async function openEditUserModal(userId) {
+            const { data, error } = await supabase.from('usuarios_planos').select('*').eq('user_jid', userId).single();
+            if (error) return showToast(`Erro ao buscar usuário: ${error.message}`, 'error');
+            
+            document.getElementById('modal-user-id').textContent = `ID: ${data.user_jid}`;
+            document.getElementById('plano').value = data.plano;
+            document.getElementById('contagem_diaria').value = data.contagem_diaria;
+            document.getElementById('edit-user-modal').classList.remove('hidden');
+        }
+
+        async function handleEditUserSubmit(e) {
+            e.preventDefault();
+            const userId = document.getElementById('modal-user-id').textContent.replace('ID: ', '');
+            const updatedData = {
+                plano: document.getElementById('plano').value,
+                contagem_diaria: parseInt(document.getElementById('contagem_diaria').value, 10)
+            };
+            const { error } = await supabase.from('usuarios_planos').update(updatedData).eq('user_jid', userId);
+            if (error) showToast(`Falha ao atualizar: ${error.message}`, 'error');
+            else showToast('Usuário atualizado com sucesso!', 'success');
+            closeModal('edit-user-modal');
+        }
+
+        async function openEditProfileModal(clientId = null) {
+            const modal = document.getElementById('edit-profile-modal');
+            const form = document.getElementById('edit-profile-form');
+            form.reset();
+            document.getElementById('profile-original-id').value = '';
+
+            if (clientId) { // Modo Edição
+                document.getElementById('profile-modal-title').textContent = 'Editar Perfil de IA';
+                const { data, error } = await supabase.from('clientprofile').select('*').eq('client_id', clientId).single();
+                if (error) return showToast(`Erro ao buscar perfil: ${error.message}`, 'error');
+                
+                document.getElementById('profile-original-id').value = data.client_id;
+                document.getElementById('profile-client-id').value = data.client_id;
+                document.getElementById('profile-client-id').readOnly = true;
+                document.getElementById('modal-profile-json').value = data.perfil_json ? JSON.stringify(data.perfil_json, null, 2) : '';
+                document.getElementById('modal-profile-history').value = data.interaction_history || '';
+            } else { // Modo Criação
+                document.getElementById('profile-modal-title').textContent = 'Criar Novo Perfil de IA';
+                document.getElementById('profile-client-id').readOnly = false;
+            }
+            modal.classList.remove('hidden');
+        }
+
+        async function handleEditProfileSubmit(e) {
+            e.preventDefault();
+            const originalId = document.getElementById('profile-original-id').value;
+            const clientId = document.getElementById('profile-client-id').value.trim();
+            if (!clientId) return showToast('O Client ID (JID) é obrigatório.', 'error');
+            
+            let perfilJson;
+            try {
+                const jsonText = document.getElementById('modal-profile-json').value;
+                perfilJson = jsonText.trim() ? JSON.parse(jsonText) : null;
+            } catch (err) {
+                return showToast('O Perfil JSON contém um formato inválido.', 'error');
+            }
+
+            const profileData = {
+                client_id: clientId,
+                perfil_json: perfilJson,
+                interaction_history: document.getElementById('modal-profile-history').value.trim()
+            };
+
+            let error;
+            if (originalId) { // Atualizar
+                const { error: updateError } = await supabase.from('clientprofile').update(profileData).eq('client_id', originalId);
+                error = updateError;
+            } else { // Inserir
+                const { error: insertError } = await supabase.from('clientprofile').insert(profileData);
+                error = insertError;
+            }
+
+            if (error) showToast(`Falha ao salvar perfil: ${error.message}`, 'error');
+            else showToast('Perfil salvo com sucesso!', 'success');
+            closeModal('edit-profile-modal');
+        }
+
+        async function handleAdminMessageSend(e) {
+            e.preventDefault();
+            if (N8N_ADMIN_WEBHOOK_URL.includes('COLE_AQUI')) {
+                return showToast('Webhook de admin não configurado.', 'error');
+            }
+            const input = document.getElementById('admin-message-input');
+            const message = input.value.trim();
+            if (!message || !selectedChatUserId) return;
+
+            const button = e.target.querySelector('button');
+            const originalButtonContent = button.innerHTML;
+            button.disabled = true;
+            button.innerHTML = `<i data-lucide="loader-circle" class="animate-spin"></i>`;
+            lucide.createIcons();
+            
+            try {
+                const response = await fetch(N8N_ADMIN_WEBHOOK_URL, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ remoteJid: selectedChatUserId, messageText: message })
+                });
+                if (!response.ok) throw new Error(`Servidor respondeu com status ${response.status}`);
+                input.value = '';
+                // Não precisa de toast, a mensagem vai aparecer no chat via realtime.
+            } catch (error) {
+                showToast(`Erro ao enviar mensagem: ${error.message}`, 'error');
+            } finally {
+                button.disabled = false;
+                button.innerHTML = originalButtonContent;
+                lucide.createIcons();
+            }
+        }
+
+        function openDeleteModal(type, id) {
+            const modal = document.getElementById('delete-confirm-modal');
+            const textEl = document.getElementById('delete-confirm-text');
+            const btn = document.getElementById('confirm-delete-btn');
+            
+            if (type === 'user') {
+                textEl.innerHTML = `Excluir o usuário <strong class="font-mono">${id}</strong>? Esta ação é irreversível.`;
+                btn.onclick = () => deleteData('usuarios_planos', 'user_jid', id, 'Usuário');
+            } else if (type === 'profile') {
+                textEl.innerHTML = `Excluir o perfil de <strong class="font-mono">${id}</strong>?`;
+                btn.onclick = () => deleteData('clientprofile', 'client_id', id, 'Perfil');
+            } else if (type === 'reminder') {
+                 textEl.innerHTML = `Excluir este lembrete?`;
+                 btn.onclick = () => deleteData('lembretes', 'id', id, 'Lembrete');
+            }
+            modal.classList.remove('hidden');
+        }
+
+        async function deleteData(table, column, id, name) {
+            const { error } = await supabase.from(table).delete().eq(column, id);
+            if (error) showToast(`Erro ao excluir ${name}: ${error.message}`, 'error');
+            else showToast(`${name} excluído com sucesso!`, 'success');
+            closeModal('delete-confirm-modal');
+        }
+        
+        function closeModal(modalId) { document.getElementById(modalId).classList.add('hidden'); }
+        
+        // ===================================================================================
+        // FUNÇÕES UTILITÁRIAS
+        // ===================================================================================
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            toast.innerHTML = `<i data-lucide="${type === 'success' ? 'check-circle' : 'alert-circle'}" class="mr-2"></i> ${message}`;
+            container.appendChild(toast);
+            lucide.createIcons();
+            setTimeout(() => toast.classList.add('show'), 10);
+            setTimeout(() => {
+                toast.classList.remove('show');
+                toast.addEventListener('transitionend', () => toast.remove());
+            }, 3000);
+        }
+
+        function renderTableSkeleton(tbodyId, columns, rows = 5) {
+            const tableBody = document.getElementById(tbodyId);
+            let skeletonHTML = '';
+            for (let i = 0; i < rows; i++) {
+                skeletonHTML += `<tr class="border-b border-border">${Array(columns).fill('<td class="p-4"><div class="h-5 w-full skeleton rounded-md"></div></td>').join('')}</tr>`;
+            }
+            tableBody.innerHTML = skeletonHTML;
+        }
+    </script>
+</body>
+</html>
+
