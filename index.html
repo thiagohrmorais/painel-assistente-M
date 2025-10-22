@@ -1,772 +1,1118 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-br">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Painel de Controle | M Assistente</title>
+    <title>CRM - Assistente M</title>
+    <!-- Carrega o Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <style>
-        :root {
-            --background: 222.2 84% 4.9%;
-            --foreground: 210 40% 98%;
-            --card: 222.2 84% 4.9%;
-            --card-foreground: 210 40% 98%;
-            --popover: 222.2 84% 4.9%;
-            --popover-foreground: 210 40% 98%;
-            --primary: 217, 91%, 60%; /* Azul Vibrante */
-            --primary-foreground: 210 40% 98%;
-            --secondary: 217.2 32.6% 17.5%;
-            --secondary-foreground: 210 40% 98%;
-            --muted: 217.2 32.6% 17.5%;
-            --muted-foreground: 215 20.2% 65.1%;
-            --accent: 217.2 32.6% 17.5%;
-            --accent-foreground: 210 40% 98%;
-            --destructive: 0 62.8% 30.6%;
-            --destructive-foreground: 210 40% 98%;
-            --border: 217.2 32.6% 17.5%;
-            --input: 217.2 32.6% 17.5%;
-            --ring: 212.7 26.8% 83.9%;
-        }
-        body { background-color: hsl(var(--background)); color: hsl(var(--foreground)); font-family: 'Inter', sans-serif; }
-        .sidebar { background-color: hsl(var(--card)); border-right: 1px solid hsl(var(--border)); }
-        .card { background-color: hsl(var(--card)); border: 1px solid hsl(var(--border)); }
-        .table-header { background-color: hsl(var(--secondary)); }
-        .table-row:hover { background-color: hsl(var(--accent)); }
-        .btn-primary { background-color: hsl(var(--primary)); color: hsl(var(--primary-foreground)); }
-        .btn-secondary { background-color: hsl(var(--secondary)); color: hsl(var(--secondary-foreground)); }
-        .btn-destructive { background-color: hsl(var(--destructive)); color: hsl(var(--destructive-foreground));}
-        .btn-primary:disabled { opacity: 0.7; cursor: not-allowed; }
-        .modal-backdrop { background-color: rgba(0,0,0,0.7); }
-        .modal-content { background-color: hsl(var(--background)); }
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: hsl(var(--secondary)); }
-        ::-webkit-scrollbar-thumb { background: hsl(var(--muted)); border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: hsl(var(--accent-foreground)); }
-        #toast-container { position: fixed; top: 1.5rem; right: 1.5rem; z-index: 100; display: flex; flex-direction: column; gap: 0.75rem; }
-        .toast { display: flex; align-items: center; padding: 1rem; border-radius: 0.5rem; box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1); transform: translateX(120%); opacity: 0; transition: all 0.3s ease-in-out; }
-        .toast.show { transform: translateX(0); opacity: 1; }
-        .toast-success { background-color: #22c55e; color: white; }
-        .toast-error { background-color: #ef4444; color: white; }
-        .skeleton { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; background-color: hsl(var(--muted));}
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
-        .notification-dot { width: 10px; height: 10px; background-color: hsl(var(--primary)); border-radius: 50%; border: 2px solid hsl(var(--card)); position: absolute; top: 0.5rem; right: 0.5rem; }
-    </style>
-     <link rel="preconnect" href="https://fonts.googleapis.com">
+    
+    <!-- Carrega a fonte Inter do Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-</head>
-<body class="antialiased">
-    <div id="toast-container"></div>
-
-    <!-- Container de Autenticação -->
-    <div id="auth-container" class="flex items-center justify-center h-screen">
-        <div class="w-full max-w-md">
-            <form id="login-form" class="card rounded-lg p-8 space-y-6">
-                <div class="text-center">
-                    <div class="flex items-center justify-center space-x-2 mb-2">
-                        <div class="w-10 h-10 bg-white text-black rounded-lg flex items-center justify-center font-bold text-2xl">M</div>
-                        <h1 class="text-2xl font-bold">M Assistente</h1>
-                    </div>
-                    <p class="text-muted-foreground">Login do Administrador</p>
-                </div>
-
-                <div>
-                    <label for="email" class="block mb-2 text-sm font-medium">Email</label>
-                    <input type="email" id="email" name="email" required class="w-full p-2 rounded-md bg-input border border-border focus:ring-primary focus:border-primary" placeholder="seu@email.com">
-                </div>
-                <div>
-                    <label for="password" class="block mb-2 text-sm font-medium">Senha</label>
-                    <input type="password" id="password" name="password" required class="w-full p-2 rounded-md bg-input border border-border focus:ring-primary focus:border-primary" placeholder="••••••••">
-                </div>
-                <button type="submit" id="login-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-md">Entrar</button>
-            </form>
-        </div>
-    </div>
     
-    <!-- Container Principal da Aplicação -->
-    <div id="app-container" class="flex h-screen hidden">
-        <aside class="sidebar w-64 flex-shrink-0 p-4 flex flex-col justify-between">
+    <!-- Carrega o cliente Supabase JS -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <style>
+        /* Define a fonte Inter como padrão */
+        body {
+            font-family: 'Inter', sans-serif;
+            scroll-behavior: smooth;
+        }
+
+        /* Estilo para o loader */
+        .loader {
+            border: 4px solid #f3f3f3; /* light grey */
+            border-top: 4px solid #3b82f6; /* blue-500 */
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 40px auto;
+        }
+        /* Loader inline menor */
+        .inline-loader {
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #3b82f6;
+            border-radius: 50%;
+            width: 16px;
+            height: 16px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            vertical-align: middle;
+            margin: 0 4px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Estilos para as bolhas de chat (Atualizados para clareza) */
+        .chat-bubble {
+            max-width: 80%;
+            padding: 0.75rem; /* p-3 */
+            margin-bottom: 0.5rem; /* my-2 */
+            border-radius: 0.5rem; /* rounded-lg */
+            word-wrap: break-word; /* Garante quebra de palavra */
+        }
+        .chat-bubble-user {
+            background-color: #dbeafe; /* blue-100 */
+            color: #1e3a8a; /* blue-900 */
+            align-self: flex-end;
+            margin-left: auto; /* Alinha à direita */
+        }
+        .chat-bubble-ai {
+            background-color: #e5e7eb; /* gray-200 */
+            color: #1f2937; /* gray-800 */
+            align-self: flex-start;
+            margin-right: auto; /* Alinha à esquerda */
+        }
+        .chat-sender {
+            font-weight: 600; /* semibold */
+            margin-bottom: 0.25rem; /* mb-1 */
+            font-size: 0.8rem; /* smaller text */
+        }
+        
+        /* Estilos para o toast de notificação */
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 12px 20px;
+            border-radius: 8px;
+            color: white;
+            font-size: 0.9rem;
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.5s ease-out;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            pointer-events: none; /* Não bloquear cliques */
+        }
+        .toast.show {
+            opacity: 1;
+        }
+        .toast-success {
+            background-color: #10b981; /* green-500 */
+        }
+        .toast-error {
+            background-color: #ef4444; /* red-500 */
+        }
+         .toast-info {
+            background-color: #3b82f6; /* blue-500 */
+        }
+
+
+        /* Estilos para Modals */
+        .modal-backdrop {
+            position: fixed;
+            inset: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 40; /* Abaixo do modal */
+            display: flex; /* Para centralizar */
+            align-items: center;
+            justify-content: center;
+        }
+        .modal {
+            background-color: white;
+            padding: 2rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+            z-index: 50;
+            width: 90%;
+            max-width: 500px;
+            max-height: 90vh; /* Altura máxima */
+            overflow-y: auto; /* Scroll se necessário */
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid #e5e7eb; /* gray-200 */
+            padding-bottom: 1rem;
+        }
+        .modal-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+        .modal-close-button {
+             background: none;
+             border: none;
+             font-size: 1.5rem;
+             cursor: pointer;
+             color: #6b7280; /* gray-500 */
+        }
+        .modal-close-button:hover {
+            color: #1f2937; /* gray-800 */
+        }
+        .modal-body {
+            margin-bottom: 1.5rem;
+        }
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.5rem;
+            border-top: 1px solid #e5e7eb; /* gray-200 */
+            padding-top: 1rem;
+        }
+        .hidden {
+            display: none;
+        }
+
+        /* Estilos base reutilizáveis */
+        .input-field {
+            display: block; width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #d1d5db; /* gray-300 */ border-radius: 0.375rem; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); font-size: 0.875rem;
+        }
+        .input-field:focus { outline: 2px solid transparent; outline-offset: 2px; border-color: #3b82f6; /* blue-500 */ box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5); }
+        .table-header { padding: 0.75rem 1.5rem; text-align: left; font-size: 0.75rem; font-weight: 500; color: #6b7280; /* gray-500 */ text-transform: uppercase; letter-spacing: 0.05em; background-color: #f9fafb; /* gray-50 */ }
+        .table-cell { padding: 1rem 1.5rem; white-space: nowrap; font-size: 0.875rem; color: #374151; /* gray-700 */ border-bottom: 1px solid #e5e7eb; /* gray-200 */ }
+        .table-cell-wrap { padding: 1rem 1.5rem; white-space: normal; font-size: 0.875rem; color: #374151; border-bottom: 1px solid #e5e7eb; word-break: break-word; } /* Adicionado word-break */
+        .link { color: #2563eb; /* blue-600 */ text-decoration: none; } .link:hover { text-decoration: underline; color: #1d4ed8; /* blue-700 */}
+        .button { padding: 0.5rem 1rem; font-size: 0.875rem; font-weight: 500; border-radius: 0.375rem; cursor: pointer; transition: background-color 0.2s; display: inline-flex; align-items: center; justify-content: center; border: none; }
+        .button-primary { background-color: #3b82f6; /* blue-500 */ color: white; } .button-primary:hover:not(:disabled) { background-color: #2563eb; /* blue-600 */ }
+        .button-secondary { background-color: #e5e7eb; /* gray-200 */ color: #374151; /* gray-700 */ } .button-secondary:hover:not(:disabled) { background-color: #d1d5db; /* gray-300 */ }
+        .button-danger { background-color: #ef4444; /* red-500 */ color: white; } .button-danger:hover:not(:disabled) { background-color: #dc2626; /* red-600 */ }
+        .button-warning { background-color: #f59e0b; /* amber-500 */ color: white; } .button-warning:hover:not(:disabled) { background-color: #d97706; /* amber-600 */ }
+        .button-green { background-color: #10b981; /* green-500 */ color: white; } .button-green:hover:not(:disabled) { background-color: #059669; /* green-600 */ }
+        .button-xs { padding: 0.25rem 0.5rem; font-size: 0.75rem; }
+        button:disabled { opacity: 0.7; cursor: not-allowed; }
+
+    </style>
+</head>
+<body class="bg-gray-100">
+
+    <!-- Tela de Login -->
+    <div id="login-screen" class="flex items-center justify-center min-h-screen bg-gray-200">
+        <div class="w-full max-w-md p-8 space-y-6 bg-white rounded-lg shadow-md">
+            <h2 class="text-2xl font-bold text-center text-gray-900">CRM - Assistente M</h2>
             <div>
-                <div class="flex items-center space-x-2 mb-8">
-                    <div class="w-8 h-8 bg-white text-black rounded-lg flex items-center justify-center font-bold text-xl">M</div>
-                    <h1 class="text-xl font-bold">M Assistente</h1>
-                </div>
-                <nav class="flex flex-col space-y-2">
-                    <a href="#dashboard" class="nav-link flex items-center space-x-2 p-2 rounded-md bg-secondary text-white"><i data-lucide="layout-dashboard"></i><span>Dashboard</span></a>
-                    <a href="#usuarios" class="nav-link flex items-center space-x-2 p-2 rounded-md hover:bg-secondary"><i data-lucide="users"></i><span>Usuários</span></a>
-                    <a href="#conversas" class="nav-link flex items-center space-x-2 p-2 rounded-md hover:bg-secondary"><i data-lucide="message-square-text"></i><span>Conversas</span></a>
-                    <a href="#perfis" class="nav-link flex items-center space-x-2 p-2 rounded-md hover:bg-secondary"><i data-lucide="brain-circuit"></i><span>Perfis de IA</span></a>
-                    <a href="#lembretes" class="nav-link flex items-center space-x-2 p-2 rounded-md hover:bg-secondary"><i data-lucide="bell"></i><span>Lembretes</span></a>
-                </nav>
+                <label for="email" class="block text-sm font-medium text-gray-700">Email</label>
+                <input type="email" id="email" value="admin@exemplo.com" class="input-field mt-1">
             </div>
             <div>
-                 <div class="border-t border-border pt-4 text-sm">
-                    <p id="user-email" class="font-semibold truncate">carregando...</p>
-                    <p class="text-xs text-muted-foreground">Administrador</p>
-                 </div>
-                 <button id="logout-btn" class="w-full mt-4 btn-secondary flex items-center justify-center space-x-2 p-2 rounded-md text-sm">
-                    <i data-lucide="log-out" class="w-4 h-4"></i><span>Sair</span>
-                 </button>
+                <label for="password" class="block text-sm font-medium text-gray-700">Senha</label>
+                <input type="password" id="password" value="123456" class="input-field mt-1">
+            </div>
+            <button id="login-button" class="w-full button button-primary">
+                Entrar
+            </button>
+            <p id="login-error" class="text-sm text-center text-red-600"></p>
+        </div>
+    </div>
+
+    <!-- Painel de Administração (inicialmente oculto) -->
+    <div id="admin-panel" class="hidden">
+        <!-- Sidebar -->
+        <aside class="fixed inset-y-0 left-0 z-10 flex-col w-64 h-full px-4 py-8 overflow-y-auto bg-gray-900 border-r md:flex">
+            <a href="#dashboard" class="flex items-center px-4 mb-10">
+                <span class="text-2xl font-bold text-white">Assistente M</span>
+            </a>
+            
+            <nav class="flex-grow">
+                <ul class="space-y-2">
+                    <li><a href="#dashboard" class="nav-link flex items-center px-4 py-2 text-gray-300 rounded-md hover:bg-gray-700"><svg class="mr-3 icon"><use xlink:href="#icon-dashboard"/></svg>Dashboard</a></li>
+                    <li><a href="#users" class="nav-link flex items-center px-4 py-2 text-gray-300 rounded-md hover:bg-gray-700"><svg class="mr-3 icon"><use xlink:href="#icon-users"/></svg>Usuários</a></li>
+                    <li><a href="#reminders" class="nav-link flex items-center px-4 py-2 text-gray-300 rounded-md hover:bg-gray-700"><svg class="mr-3 icon"><use xlink:href="#icon-clock"/></svg>Lembretes</a></li>
+                    <li><a href="#conversations" class="nav-link flex items-center px-4 py-2 text-gray-300 rounded-md hover:bg-gray-700"><svg class="mr-3 icon"><use xlink:href="#icon-message"/></svg>Conversas</a></li>
+                </ul>
+            </nav>
+            
+            <div class="mt-auto">
+                <button id="logout-button" class="flex items-center w-full px-4 py-2 text-gray-300 rounded-md hover:bg-gray-700">
+                    <svg class="mr-3 icon"><use xlink:href="#icon-logout"/></svg>Sair
+                </button>
             </div>
         </aside>
 
-        <main class="flex-1 overflow-y-auto p-8">
-            <div id="loader" class="flex items-center justify-center h-full"><div class="flex flex-col items-center"><i data-lucide="loader-circle" class="animate-spin h-12 w-12 mb-4"></i><p>Conectando ao Supabase...</p></div></div>
-
-            <div id="dashboard-view" class="view hidden">
-                <h2 class="text-3xl font-bold mb-6">Dashboard</h2>
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-                    <div class="card p-6 rounded-lg"><h3 class="text-muted-foreground text-sm">Total de Usuários</h3><p id="total-usuarios" class="text-3xl font-bold">-</p></div>
-                    <div class="card p-6 rounded-lg"><h3 class="text-muted-foreground text-sm">Usuários PRO</h3><p id="usuarios-pro" class="text-3xl font-bold">-</p></div>
-                    <div class="card p-6 rounded-lg"><h3 class="text-muted-foreground text-sm">Receita Mensal (MRR)</h3><p id="receita-mensal" class="text-3xl font-bold">R$ --</p></div>
-                    <div class="card p-6 rounded-lg"><h3 class="text-muted-foreground text-sm">Msgs Trocadas (Hoje)</h3><p id="msgs-hoje" class="text-3xl font-bold">-</p></div>
-                </div>
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div class="card p-6 rounded-lg"><h3 class="font-bold mb-4">Novos Usuários (Últimos 7 dias)</h3><canvas id="novos-usuarios-chart"></canvas></div>
-                    <div class="card p-6 rounded-lg"><h3 class="font-bold mb-4">Atividade Recente</h3><div id="atividade-recente-list" class="max-h-80 overflow-y-auto"></div></div>
-                </div>
-            </div>
-
-            <div id="usuarios-view" class="view hidden">
-                <div class="flex justify-between items-center mb-6"><h2 class="text-3xl font-bold">Gerenciador de Usuários</h2><input type="text" id="user-search" placeholder="Buscar por JID..." class="p-2 rounded-md bg-input border border-border w-64"></div>
-                <div class="card rounded-lg overflow-hidden"><table class="w-full text-left"><thead class="table-header"><tr><th class="p-4">ID do Usuário (JID)</th><th class="p-4">Plano</th><th class="p-4">Contagem Diária</th><th class="p-4">Última Mensagem</th><th class="p-4 text-right">Ações</th></tr></thead><tbody id="usuarios-table-body"></tbody></table></div>
-            </div>
-            
-            <div id="conversas-view" class="view hidden h-full">
-                <h2 class="text-3xl font-bold mb-6">Histórico de Conversas</h2>
-                <div class="card rounded-lg h-[calc(100%-4.5rem)] flex">
-                    <div class="w-1/3 border-r border-border overflow-y-auto">
-                        <div class="p-2 sticky top-0 bg-secondary z-10"><input type="text" id="convo-search" placeholder="Buscar usuário..." class="p-2 w-full rounded-md bg-input border border-border"></div>
-                        <ul id="convo-user-list" class="p-2"></ul>
-                    </div>
-                    <div id="chat-panel" class="w-2/3 flex flex-col">
-                        <div id="chat-welcome" class="flex-1 flex flex-col items-center justify-center text-muted-foreground"><i data-lucide="messages-square" class="w-16 h-16 mb-4"></i><p>Selecione um usuário para ver a conversa</p></div>
-                        <div id="chat-history-container" class="flex-1 p-4 overflow-y-auto hidden"></div>
-                        <div id="chat-input-container" class="p-4 border-t border-border hidden"><form id="admin-message-form" class="flex items-center space-x-2"><input type="text" id="admin-message-input" class="w-full p-2 rounded-md bg-input border-border" placeholder="Digite uma mensagem..." autocomplete="off"><button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white p-2 rounded-md"><i data-lucide="send"></i></button></form></div>
-                    </div>
-                </div>
-            </div>
-
-            <div id="perfis-view" class="view hidden">
-                 <div class="flex justify-between items-center mb-6"><h2 class="text-3xl font-bold">Perfis de IA dos Clientes</h2><button class="bg-blue-600 hover:bg-blue-700 text-white flex items-center space-x-2 px-4 py-2 rounded-md" onclick="openEditProfileModal()"><i data-lucide="plus"></i><span>Criar Perfil</span></button></div>
-                <div class="card rounded-lg overflow-hidden"><table class="w-full text-left"><thead class="table-header"><tr><th class="p-4">ID do Cliente</th><th class="p-4">Resumo Inteligente do Perfil</th><th class="p-4 text-right">Ações</th></tr></thead><tbody id="perfis-table-body"></tbody></table></div>
-            </div>
-
-            <div id="lembretes-view" class="view hidden">
-                <h2 class="text-3xl font-bold mb-6">Lembretes Agendados</h2>
-                <div class="card rounded-lg overflow-hidden"><table class="w-full text-left"><thead class="table-header"><tr><th class="p-4">ID do Usuário</th><th class="p-4">Mensagem</th><th class="p-4">Data de Envio</th><th class="p-4">Status</th><th class="p-4 text-right">Ações</th></tr></thead><tbody id="lembretes-table-body"></tbody></table></div>
+        <!-- Conteúdo Principal -->
+        <main class="md:ml-64">
+            <div class="p-4 md:p-8">
+                <header class="mb-6 flex justify-between items-center">
+                    <h1 id="page-title" class="text-3xl font-bold text-gray-900">Dashboard</h1>
+                    <div id="page-actions"></div>
+                </header>
+                <div id="content-area"></div>
             </div>
         </main>
     </div>
 
-    <!-- Modais -->
-    <div id="edit-user-modal" class="fixed inset-0 modal-backdrop flex items-center justify-center hidden z-50"><div class="modal-content card rounded-lg w-full max-w-md p-6"><h3 class="text-xl font-bold mb-4">Editar Usuário</h3><p id="modal-user-id" class="text-sm text-muted-foreground mb-4"></p><form id="edit-user-form"><div class="mb-4"><label for="plano" class="block mb-2 text-sm font-medium">Plano</label><select id="plano" name="plano" class="w-full p-2 rounded-md bg-input border border-border"><option value="GRATUITO">GRATUITO</option><option value="PRO">PRO</option></select></div><div class="mb-6"><label for="contagem_diaria" class="block mb-2 text-sm font-medium">Contagem Diária</label><input type="number" id="contagem_diaria" name="contagem_diaria" class="w-full p-2 rounded-md bg-input border border-border"></div><div class="flex justify-end space-x-4"><button type="button" class="btn-secondary px-4 py-2 rounded-md" onclick="closeModal('edit-user-modal')">Cancelar</button><button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md">Salvar</button></div></form></div></div>
-    <div id="edit-profile-modal" class="fixed inset-0 modal-backdrop flex items-center justify-center hidden z-50"><div class="modal-content card rounded-lg w-full max-w-2xl p-6"><h3 id="profile-modal-title" class="text-xl font-bold mb-4"></h3><form id="edit-profile-form"><div class="space-y-4 max-h-[60vh] overflow-y-auto"><input type="hidden" id="profile-original-id"><div class="space-y-2"><label for="profile-client-id" class="font-semibold">Client ID (JID)</label><input type="text" id="profile-client-id" class="w-full p-2 rounded-md bg-input border-border font-mono text-sm" placeholder="Ex: 5511999998888@s.whatsapp.net" required></div><div class="space-y-2"><label for="modal-profile-json" class="font-semibold">Perfil JSON</label><textarea id="modal-profile-json" class="w-full p-2 h-40 rounded-md bg-input border-border font-mono text-sm"></textarea></div><div class="space-y-2"><label for="modal-profile-history" class="font-semibold">Histórico de Interação</label><textarea id="modal-profile-history" class="w-full p-2 h-24 rounded-md bg-input border-border font-mono text-sm"></textarea></div></div><div class="flex justify-end mt-6 space-x-4"><button type="button" class="btn-secondary px-4 py-2 rounded-md" onclick="closeModal('edit-profile-modal')">Cancelar</button><button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md">Salvar Perfil</button></div></form></div></div>
-    <div id="delete-confirm-modal" class="fixed inset-0 modal-backdrop flex items-center justify-center hidden z-50"><div class="modal-content card rounded-lg w-full max-w-md p-6"><h3 class="text-xl font-bold mb-2">Confirmar Exclusão</h3><p id="delete-confirm-text" class="text-muted-foreground mb-6"></p><div class="flex justify-end space-x-4"><button type="button" class="btn-secondary px-4 py-2 rounded-md" onclick="closeModal('delete-confirm-modal')">Cancelar</button><button type="button" id="confirm-delete-btn" class="btn-destructive px-4 py-2 rounded-md">Confirmar Exclusão</button></div></div></div>
+    <!-- Modals -->
+    <div id="modal-container" class="hidden"></div>
+    
+    <!-- Toast Notification -->
+    <div id="toast-notification" class="toast"></div>
 
-    <script>
-        // ===================================================================================
-        // CONFIGURAÇÃO
-        // ===================================================================================
-        const SUPABASE_URL = 'https://qedstcloovfgeblduykc.supabase.co'; 
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFlZHN0Y2xvb3ZmZ2VibGR1eWtjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUxMzk2MzQsImV4cCI6MjA3MDcxNTYzNH0.tq76Qk9pqwb1OutsLX79KgrQhIB8q2ekAcczwhHsxtU'; 
-        const PLANO_PRO_PRECO = 47.00;
-        const N8N_ADMIN_WEBHOOK_URL = 'COLE_AQUI_URL_DO_SEU_WEBHOOK_N8N_PARA_ENVIAR_MENSAGEM';
-        
-        let supabase;
-        let currentView = 'dashboard';
-        let allUsersCache = []; 
-        let convoUsersCache = [];
-        let selectedChatUserId = null;
-        
-        // ===================================================================================
-        // INICIALIZAÇÃO E AUTENTICAÇÃO
-        // ===================================================================================
-        document.addEventListener('DOMContentLoaded', () => {
-            lucide.createIcons();
-            if (SUPABASE_URL.includes('COLE_A_URL')) {
-                document.getElementById('auth-container').innerHTML = `<div class="text-center text-destructive-foreground bg-destructive p-4 rounded-md max-w-md"><h3 class="font-bold text-lg">Configuração Incompleta!</h3><p>Abra o arquivo e insira a URL e a Chave Anon do seu projeto Supabase.</p></div>`;
-                return;
-            }
+    <!-- Alerta de Configuração do Supabase -->
+    <div id="supabase-alert" class="fixed bottom-4 right-4 z-50 hidden max-w-sm p-4 bg-yellow-100 border-l-4 border-yellow-500 rounded-md shadow-lg">
+        <div class="flex"><div class="flex-shrink-0"><svg class="w-6 h-6 text-yellow-600 icon"><use xlink:href="#icon-alert"/></svg></div><div class="ml-3"><p class="text-sm font-semibold text-yellow-800">Configuração Necessária</p><p class="mt-1 text-sm text-yellow-700">Edite este ficheiro HTML e insira sua `SUPABASE_URL` e `SUPABASE_ANON_KEY` para conectar aos dados reais.</p></div></div>
+    </div>
+
+    <!-- Definições SVG -->
+    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+        <symbol id="icon-dashboard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></symbol>
+        <symbol id="icon-users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+        <symbol id="icon-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></symbol>
+        <symbol id="icon-message" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></symbol>
+        <symbol id="icon-logout" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></symbol>
+        <symbol id="icon-alert" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.46 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></symbol>
+        <symbol id="icon-edit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></symbol>
+        <symbol id="icon-trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></symbol>
+        <symbol id="icon-dollar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" x2="12" y1="2" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></symbol>
+    </svg>
+
+    <!-- ======================= -->
+    <!-- SCRIPT PRINCIPAL DA APP -->
+    <!-- ======================= -->
+    <script type="module">
+        const { createClient } = supabase;
+
+        // --- Configuração Supabase (EDITAR AQUI) ---
+        const SUPABASE_URL = "https://qedstcloovfgeblduykc.supabase.co"; 
+        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFlZHN0Y2xvb3ZmZ2VibGR1eWtjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUxMzk2MzQsImV4cCI6MjA3MDcxNTYzNH0.tq76Qk9pqwb1OutsLX79KgrQhIB8q2ekAcczwhHsxtU"; 
+        const USE_MOCK_DATA = false; // Mude para false para usar Supabase
+        const PRO_PLAN_PRICE = 47.00; // Defina o preço mensal do plano PRO
+        // --- Fim da Configuração ---
+
+        let supabaseClient;
+        const supabaseAlert = document.getElementById('supabase-alert');
+
+        // Mock Data (mantido para testes se USE_MOCK_DATA for true)
+        let mockData = { 
+            users: [ { id: 1, full_name: 'Thiago Morais (Mock)', whatsapp_jid: '5587920007963@s.whatsapp.net', plan: 'PRO', daily_message_count: 5, last_seen_at: new Date(Date.now() - 1 * 60 * 1000).toISOString(), summarized_at: new Date(Date.now() - 10 * 60 * 1000).toISOString(), perfil_json: { projetos: ["podcast sobre finanças"], tom: "analítico" }, interaction_history: "user: Olá\nai: Olá Thiago! Como posso ajudar hoje?\nuser: Ideias para podcast.\nai: Claro! Que tal focar em investimentos para iniciantes?"}, { id: 2, full_name: 'Cliente Freemium (Mock)', whatsapp_jid: '5511912345678@s.whatsapp.net', plan: 'GRATUITO', daily_message_count: 10, last_seen_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), summarized_at: null, perfil_json: null, interaction_history: "user: oi\nai: Olá!" }, ], conversations: [ { id: 10, session_id: '1 5587920007963@s.whatsapp.net', message: JSON.stringify({ type: 'user', content: 'Olá M, tudo bem?' }), created_at: new Date(Date.now() - 5 * 60 * 1000).toISOString() }, { id: 11, session_id: '1 5587920007963@s.whatsapp.net', message: JSON.stringify({ type: 'ai', content: 'Olá Thiago! Tudo ótimo. Como posso te ajudar hoje com seu podcast de finanças?' }), created_at: new Date(Date.now() - 4 * 60 * 1000).toISOString() }, { id: 12, session_id: '1 5587920007963@s.whatsapp.net', message: JSON.stringify({ type: 'user', content: 'Quero ideias para o próximo episódio.' }), created_at: new Date(Date.now() - 3 * 60 * 1000).toISOString() } ], reminders: [ { id: 100, profile_id: '5587920007963@s.whatsapp.net', reminder_message: 'Ligar para o dentista', event_timestamp: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000).toISOString(), status: 'pendente', created_at: new Date().toISOString(), send_at: new Date(Date.now() + 22 * 60 * 60 * 1000).toISOString()}, { id: 101, profile_id: '5511912345678@s.whatsapp.net', reminder_message: 'Entregar relatório', event_timestamp: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(), status: 'enviado', created_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), send_at: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString() }, { id: 102, profile_id: '5587920007963@s.whatsapp.net', reminder_message: 'Comprar pão', event_timestamp: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(), status: 'pendente', created_at: new Date(Date.now() - 1 * 60 * 1000).toISOString(), send_at: new Date(Date.now()).toISOString() }, ] };
+        let nextMockUserId = 3; let nextMockReminderId = 103; let nextMockConvoId = 13;
+
+
+        if (!USE_MOCK_DATA && (!SUPABASE_URL || !SUPABASE_ANON_KEY)) {
+            console.error("Supabase URL ou Anon Key não configurados para uso real.");
+            supabaseAlert.classList.remove('hidden');
+        } else if (!USE_MOCK_DATA) {
             try {
-                supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-                setupAuthentication();
+                 supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                 console.log("Cliente Supabase inicializado.");
             } catch (error) {
-                console.error("Erro ao inicializar Supabase:", error);
-                showToast('Erro fatal ao conectar. Verifique o console.', 'error');
+                 console.error("Erro ao inicializar Supabase:", error);
+                 supabaseAlert.classList.remove('hidden'); // Mostra alerta se falhar
             }
+        } else {
+             console.log("A usar dados fictícios (mock data).");
+        }
+
+
+        // --- Seletores do DOM ---
+        const loginScreen = document.getElementById('login-screen');
+        const adminPanel = document.getElementById('admin-panel');
+        const loginButton = document.getElementById('login-button');
+        const logoutButton = document.getElementById('logout-button');
+        const loginError = document.getElementById('login-error');
+        const contentArea = document.getElementById('content-area');
+        const pageTitle = document.getElementById('page-title');
+        const pageActions = document.getElementById('page-actions');
+        const navLinks = document.querySelectorAll('.nav-link');
+        const toastElement = document.getElementById('toast-notification');
+        const modalContainer = document.getElementById('modal-container');
+
+        // --- Estado da Aplicação ---
+        let currentModal = null; 
+        let currentUserSession = null; // Para guardar a sessão do Supabase
+
+        // --- Lógica de Autenticação ---
+        loginButton.addEventListener('click', async () => {
+             const emailInput = document.getElementById('email');
+             const passwordInput = document.getElementById('password');
+             const email = emailInput.value;
+             const password = passwordInput.value;
+             loginError.textContent = '';
+             loginButton.disabled = true;
+             loginButton.innerHTML = `<span class="inline-loader"></span> A entrar...`; // Adiciona loader ao botão
+
+             if (USE_MOCK_DATA || !supabaseClient) {
+                 // Login fictício (sem validação)
+                 currentUserSession = { user: { email: email } }; // Simula sessão
+                 loginScreen.classList.add('hidden');
+                 adminPanel.classList.remove('hidden');
+                 window.location.hash = '#dashboard';
+                 router();
+                 loginButton.disabled = false;
+                 loginButton.textContent = 'Entrar';
+             } else {
+                 // Login real com Supabase
+                 try {
+                     const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+                     if (error) throw error;
+                     currentUserSession = data.session;
+                     loginScreen.classList.add('hidden');
+                     adminPanel.classList.remove('hidden');
+                     window.location.hash = '#dashboard';
+                     router();
+                 } catch (error) {
+                     loginError.textContent = 'Erro de login: ' + error.message;
+                     currentUserSession = null;
+                 } finally {
+                     loginButton.disabled = false;
+                     loginButton.textContent = 'Entrar';
+                 }
+             }
+         });
+
+        logoutButton.addEventListener('click', async () => {
+             if (!USE_MOCK_DATA && supabaseClient) {
+                 try {
+                     const { error } = await supabaseClient.auth.signOut();
+                     if (error) throw error;
+                 } catch (error) {
+                     console.error("Erro ao fazer logout:", error);
+                     showToast(`Erro ao sair: ${error.message}`, 'error');
+                 }
+             }
+             currentUserSession = null;
+             loginScreen.classList.remove('hidden');
+             adminPanel.classList.add('hidden');
+             window.location.hash = '';
+             router(); // Limpa a contentArea
+         });
+
+        // --- Roteador ---
+        window.addEventListener('hashchange', router);
+        window.addEventListener('load', async () => {
+             // Verifica a sessão ao carregar
+             let session = null;
+             if (!USE_MOCK_DATA && supabaseClient) {
+                  try {
+                       const { data } = await supabaseClient.auth.getSession();
+                       session = data.session;
+                  } catch (error) {
+                       console.error("Erro ao verificar sessão:", error);
+                  }
+             } else if (USE_MOCK_DATA && localStorage.getItem('mockSession') === 'true') { // Usa localStorage para mock persistente
+                  session = { user: { email: 'mock@user.com' } }; 
+             }
+             
+             currentUserSession = session;
+
+             if (currentUserSession) {
+                 localStorage.setItem('mockSession', 'true'); // Marca mock session
+                 loginScreen.classList.add('hidden');
+                 adminPanel.classList.remove('hidden');
+                 window.location.hash = window.location.hash || '#dashboard';
+             } else {
+                 localStorage.removeItem('mockSession'); // Limpa mock session
+                 loginScreen.classList.remove('hidden');
+                 adminPanel.classList.add('hidden');
+                 window.location.hash = ''; 
+             }
+             router();
         });
 
-        function setupAuthentication() {
-            const authContainer = document.getElementById('auth-container');
-            const appContainer = document.getElementById('app-container');
-            const loginForm = document.getElementById('login-form');
-            const loginBtn = document.getElementById('login-btn');
 
-            supabase.auth.getSession().then(({ data: { session } }) => {
-                if (session) {
-                    authContainer.classList.add('hidden');
-                    appContainer.classList.remove('hidden');
-                    initializeApp(session.user);
-                } else {
-                    authContainer.classList.remove('hidden');
-                    appContainer.classList.add('hidden');
-                }
-            });
-
-            loginForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                loginBtn.disabled = true;
-                loginBtn.textContent = 'Entrando...';
-                const email = e.target.email.value;
-                const password = e.target.password.value;
-                const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-
-                if (error) {
-                    showToast(error.message, 'error');
-                } else if (data.user) {
-                    authContainer.classList.add('hidden');
-                    appContainer.classList.remove('hidden');
-                    initializeApp(data.user);
-                }
-                loginBtn.disabled = false;
-                loginBtn.textContent = 'Entrar';
-            });
-            
-            supabase.auth.onAuthStateChange((_event, session) => {
-                if (!session) {
-                    location.reload();
-                }
-            });
-        }
-
-        async function initializeApp(user) {
-            document.getElementById('user-email').textContent = user.email;
-            document.getElementById('logout-btn').addEventListener('click', async () => {
-                await supabase.auth.signOut();
-            });
-            
-            const loader = document.getElementById('loader');
-            loader.classList.remove('hidden');
-            setupNavigation();
-            setupSearchListeners();
-            setupForms();
-            await loadView('dashboard');
-            setupRealtimeSubscriptions();
-            loader.classList.add('hidden');
-        }
-        
-        // ===================================================================================
-        // NAVEGAÇÃO E CARREGAMENTO DE VIEWS
-        // ===================================================================================
-        function setupNavigation() {
-            const navLinks = document.querySelectorAll('.nav-link');
-            navLinks.forEach(link => {
-                link.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    const viewId = link.getAttribute('href').substring(1);
-                    if (currentView === viewId) return;
-                    currentView = viewId;
-                    loadView(viewId);
-                    navLinks.forEach(l => l.classList.remove('bg-secondary', 'text-white'));
-                    link.classList.add('bg-secondary', 'text-white');
-                });
-            });
-        }
-
-        async function loadView(viewId) {
-            document.querySelectorAll('.view').forEach(v => v.classList.add('hidden'));
-            const viewEl = document.getElementById(`${viewId}-view`);
-            
-            try {
-                switch(viewId) {
-                    case 'dashboard': await loadDashboardData(); break;
-                    case 'usuarios': await loadUsuariosData(); break;
-                    case 'conversas': await loadConversasData(); break;
-                    case 'perfis': await loadPerfisData(); break;
-                    case 'lembretes': await loadLembretesData(); break;
-                }
-                viewEl.classList.remove('hidden');
-            } catch (error) {
-                console.error(`Erro ao carregar a view ${viewId}:`, error);
-                showToast(`Erro ao carregar dados: ${error.message}`, 'error');
-            }
-        }
-        
-        // ===================================================================================
-        // ATUALIZAÇÕES EM TEMPO REAL (REALTIME)
-        // ===================================================================================
-        function setupRealtimeSubscriptions() {
-            const channel = supabase.channel('public-changes');
-            channel
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'usuarios_planos' }, () => {
-                    if (['dashboard', 'usuarios', 'conversas'].includes(currentView)) {
-                        console.log('Realtime update on usuarios_planos triggered for view:', currentView);
-                        loadView(currentView);
-                    }
-                })
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'lembretes' }, () => {
-                    if (['dashboard', 'lembretes'].includes(currentView)) {
-                        console.log('Realtime update on lembretes triggered for view:', currentView);
-                        loadView(currentView);
-                    }
-                })
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'clientprofile' }, () => {
-                    if(currentView === 'perfis') {
-                         console.log('Realtime update on "clientprofile" triggered for view:', currentView);
-                         loadPerfisData();
-                    }
-                })
-                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'mai_chat_history' }, (payload) => {
-                    const sessionId = payload.new.session_id;
-                    const userIdMatch = sessionId.match(/(\d+@s\.whatsapp\.net)/);
-                    if (!userIdMatch) return;
-                    const userId = userIdMatch[0];
-
-                    if (currentView === 'conversas') {
-                        console.log('Realtime INSERT on mai_chat_history triggered for view:', currentView);
-                        if (userId === selectedChatUserId) {
-                            appendChatMessage(payload.new);
-                        } else {
-                            const userListItem = document.querySelector(`.convo-user-item[data-user-id="${userId}"] .notification-dot`);
-                            if(userListItem) userListItem.classList.remove('hidden');
-                        }
-                    }
-                })
-                .subscribe();
-        }
-
-        // ===================================================================================
-        // VIEW: DASHBOARD
-        // ===================================================================================
-        async function loadDashboardData() {
-            const { data: usuarios, error: uErr } = await supabase.from('usuarios_planos').select('user_jid, plano, contagem_diaria, created_at, ultima_mensagem_em').order('ultima_mensagem_em', { ascending: false });
-            if (uErr) throw uErr;
-            
-            const proUsers = usuarios.filter(u => u.plano === 'PRO');
-            const mrr = (proUsers.length * PLANO_PRO_PRECO).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-            const totalMsgsHoje = usuarios.reduce((sum, u) => sum + u.contagem_diaria, 0);
-
-            document.getElementById('total-usuarios').textContent = usuarios.length;
-            document.getElementById('usuarios-pro').textContent = proUsers.length;
-            document.getElementById('receita-mensal').textContent = mrr;
-            document.getElementById('msgs-hoje').textContent = totalMsgsHoje;
-
-            renderNovosUsuariosChart(usuarios);
-            renderAtividadeRecente(usuarios);
-        }
-
-        function renderNovosUsuariosChart(usuarios) {
-            const today = new Date();
-            const last7Days = Array.from({ length: 7 }, (_, i) => {
-                const d = new Date(today);
-                d.setDate(today.getDate() - i);
-                return d.toISOString().split('T')[0];
-            }).reverse();
-
-            const userCounts = last7Days.map(day => {
-                return usuarios.filter(u => new Date(u.created_at).toISOString().startsWith(day)).length;
-            });
-            
-            const ctx = document.getElementById('novos-usuarios-chart').getContext('2d');
-            if (window.myChart) window.myChart.destroy();
-            window.myChart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: last7Days.map(d => new Date(d + 'T12:00:00Z').toLocaleDateString('pt-BR', {day: '2-digit', month: '2-digit'})),
-                    datasets: [{
-                        label: 'Novos Usuários',
-                        data: userCounts,
-                        backgroundColor: 'hsla(var(--primary), 0.2)',
-                        borderColor: 'hsl(var(--primary))',
-                        borderWidth: 2,
-                        tension: 0.3,
-                        fill: true
-                    }]
-                },
-                options: { scales: { y: { beginAtZero: true, grid: { color: 'hsl(var(--border))' }, ticks: { color: 'hsl(var(--muted-foreground))', stepSize: 1 } }, x: { grid: { display: false }, ticks: { color: 'hsl(var(--muted-foreground))' } } }, plugins: { legend: { display: false } } }
-            });
-        }
-        
-        function renderAtividadeRecente(usuarios) {
-            const listEl = document.getElementById('atividade-recente-list');
-            listEl.innerHTML = '';
-            if (usuarios.length === 0) {
-                listEl.innerHTML = `<div class="text-center text-muted-foreground p-8">Nenhuma atividade recente.</div>`;
-                return;
-            }
-            usuarios.slice(0, 5).forEach(u => {
-                listEl.innerHTML += `<div class="p-2 border-b border-border text-sm"><p class="font-semibold truncate">${u.user_jid}</p><p class="text-xs text-muted-foreground">Última msg: ${new Date(u.ultima_mensagem_em).toLocaleString('pt-BR')}</p></div>`;
-            });
-        }
-
-        // ===================================================================================
-        // VIEW: USUÁRIOS
-        // ===================================================================================
-        async function loadUsuariosData() {
-            renderTableSkeleton('usuarios-table-body', 5);
-            const { data, error } = await supabase.from('usuarios_planos').select('*').order('created_at', { ascending: false });
-            if (error) throw error;
-            allUsersCache = data;
-            document.getElementById('user-search').value = '';
-            renderUsuariosTable(data);
-        }
-
-        function renderUsuariosTable(users) {
-            const tableBody = document.getElementById('usuarios-table-body');
-            tableBody.innerHTML = '';
-            if (users.length === 0) {
-                tableBody.innerHTML = `<tr><td colspan="5" class="text-center p-8 text-muted-foreground">Nenhum usuário encontrado.</td></tr>`;
-                return;
-            }
-            users.forEach(user => {
-                tableBody.innerHTML += `
-                    <tr class="table-row border-b border-border">
-                        <td class="p-4 font-mono text-xs">${user.user_jid}</td>
-                        <td class="p-4"><span class="px-2 py-1 rounded-full text-xs font-semibold ${user.plano === 'PRO' ? 'bg-green-400 text-green-900' : 'bg-blue-400 text-blue-900'}">${user.plano}</span></td>
-                        <td class="p-4 text-center">${user.contagem_diaria}</td>
-                        <td class="p-4">${new Date(user.ultima_mensagem_em).toLocaleString('pt-BR')}</td>
-                        <td class="p-4 text-right"><button class="p-1 hover:text-blue-500" onclick="openEditUserModal('${user.user_jid}')"><i data-lucide="file-pen-line"></i></button><button class="p-1 hover:text-destructive" onclick="openDeleteModal('user', '${user.user_jid}')"><i data-lucide="trash-2"></i></button></td>
-                    </tr>`;
-            });
-            lucide.createIcons();
-        }
-        
-        // ===================================================================================
-        // VIEW: CONVERSAS
-        // ===================================================================================
-        async function loadConversasData() {
-            selectedChatUserId = null;
-            document.getElementById('chat-welcome').classList.remove('hidden');
-            document.getElementById('chat-history-container').classList.add('hidden');
-            document.getElementById('chat-input-container').classList.add('hidden');
-            
-            document.getElementById('convo-user-list').innerHTML = `<div class="p-2 space-y-2">${Array(5).fill('<div class="h-12 w-full skeleton rounded-md"></div>').join('')}</div>`;
-            const { data, error } = await supabase.from('usuarios_planos').select('user_jid, plano').order('ultima_mensagem_em', { ascending: false });
-            if (error) throw error;
-            convoUsersCache = data;
-            document.getElementById('convo-search').value = '';
-            renderConversasList(data);
-        }
-
-        function renderConversasList(users) {
-            const listEl = document.getElementById('convo-user-list');
-            listEl.innerHTML = '';
-            if (users.length === 0) {
-                listEl.innerHTML = `<div class="p-4 text-center text-muted-foreground text-sm">Nenhum usuário para mostrar.</div>`;
-                return;
-            }
-            users.forEach(user => {
-                listEl.innerHTML += `<li data-user-id="${user.user_jid}" class="convo-user-item p-3 rounded-md hover:bg-accent cursor-pointer border-b border-border relative"><p class="font-semibold truncate">${user.user_jid}</p><p class="text-xs ${user.plano === 'PRO' ? 'text-green-400' : 'text-blue-400'}">${user.plano}</p><div class="notification-dot hidden"></div></li>`;
-            });
-            document.querySelectorAll('.convo-user-item').forEach(item => {
-                item.addEventListener('click', () => {
-                    const notificationDot = item.querySelector('.notification-dot');
-                    if (notificationDot) notificationDot.classList.add('hidden');
-                    
-                    document.querySelectorAll('.convo-user-item').forEach(i => i.classList.remove('bg-accent'));
-                    item.classList.add('bg-accent');
-                    selectedChatUserId = item.dataset.userId;
-                    fetchAndRenderChatHistory(selectedChatUserId);
-                });
-            });
-        }
-        
-        async function fetchAndRenderChatHistory(userId) {
-            document.getElementById('chat-welcome').classList.add('hidden');
-            const container = document.getElementById('chat-history-container');
-            const inputContainer = document.getElementById('chat-input-container');
-            container.innerHTML = `<div class="flex items-center justify-center h-full"><i data-lucide="loader-circle" class="animate-spin h-8 w-8"></i></div>`;
-            container.classList.remove('hidden');
-            inputContainer.classList.remove('hidden');
-            lucide.createIcons();
-
-            const { data, error } = await supabase.from('mai_chat_history').select('*').ilike('session_id', `%${userId}%`).order('created_at');
-            if(error) {
-                showToast(`Erro ao buscar chat: ${error.message}`, 'error');
-                container.innerHTML = `<div class="text-center text-destructive p-8">Erro ao carregar histórico.</div>`;
-                return;
-            }
-            container.innerHTML = '';
-            if (data.length === 0) {
-                 container.innerHTML = `<div class="flex-1 flex flex-col items-center justify-center text-muted-foreground"><i data-lucide="message-square-off" class="w-16 h-16 mb-4"></i><p>Nenhuma mensagem encontrada.</p></div>`;
-                 lucide.createIcons();
+        function router() {
+            pageActions.innerHTML = ''; 
+            // Verifica se está logado ANTES de tentar rotear
+             if (!currentUserSession) {
+                 loginScreen.classList.remove('hidden');
+                 adminPanel.classList.add('hidden');
+                 contentArea.innerHTML = ''; // Limpa conteúdo se deslogado
                  return;
-            }
-            data.forEach(msg => appendChatMessage(msg, container));
+             }
+             
+             // Se logado, continua
+             loginScreen.classList.add('hidden');
+             adminPanel.classList.remove('hidden');
+
+            const route = window.location.hash || '#dashboard';
+            navLinks.forEach(link => link.classList.remove('bg-gray-700'));
+            let baseRoute = route.split('/')[0]; 
+            if (baseRoute.startsWith('#user-')) baseRoute = '#users'; 
+            
+            const activeLink = document.querySelector(`.nav-link[href="${baseRoute}"]`);
+            if (activeLink) activeLink.classList.add('bg-gray-700');
+
+            // Renderiza a página correspondente
+            if (route === '#dashboard') renderDashboard();
+            else if (route === '#users') renderUserList();
+            else if (route.startsWith('#user-')) {
+                const jid = route.substring(6); 
+                renderUserDetails(jid);
+            } else if (route === '#reminders') renderReminderList();
+            else if (route === '#conversations') renderConversationList(); // Modificado para chamar a nova função
+            else renderDashboard(); // Rota padrão
         }
 
-        function appendChatMessage(msg, container = null) {
-            if (!container) container = document.getElementById('chat-history-container');
-            
-            const isAI = msg.message && msg.message.type === 'ai';
-            const messageText = (msg.message && typeof msg.message.message === 'string')
-                ? msg.message.message.replace(/\[LIST:.*?\]/g, '[<i>Componente de Lista Ocultado</i>]')
-                : '[Mensagem inválida ou vazia]';
+        // --- Funções Utilitárias (Incluindo SVG Loader) ---
+        function showLoader() { contentArea.innerHTML = '<div class="loader"></div>'; }
+        function formatDate(isoString) { /* ... */ if (!isoString) return 'N/A'; try { return new Date(isoString).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }); } catch(e) { return 'Data Inválida'; } }
+        function renderPlanBadge(plan) { /* ... */ const p = plan || 'GRATUITO'; return `<span class="px-2 py-0.5 text-xs font-medium ${p === 'PRO' ? 'text-green-800 bg-green-100' : 'text-gray-800 bg-gray-100'} rounded-full">${p}</span>`; }
+        function renderStatusBadge(status) { /* ... */ const s = status || 'desconhecido'; if (s === 'pendente') return `<span class="px-2 py-0.5 text-xs font-medium text-yellow-800 bg-yellow-100 rounded-full">${s}</span>`; if (s === 'enviado') return `<span class="px-2 py-0.5 text-xs font-medium text-blue-800 bg-blue-100 rounded-full">${s}</span>`; if (s === 'cancelado') return `<span class="px-2 py-0.5 text-xs font-medium text-red-800 bg-red-100 rounded-full">${s}</span>`; return `<span class="px-2 py-0.5 text-xs font-medium text-gray-800 bg-gray-100 rounded-full">${s}</span>`; }
+        let toastTimeout; function showToast(message, type = 'success') { clearTimeout(toastTimeout); toastElement.textContent = message; toastElement.className = `toast ${type === 'success' ? 'toast-success' : type === 'error' ? 'toast-error' : 'toast-info'}`; toastElement.classList.add('show'); toastTimeout = setTimeout(() => toastElement.classList.remove('show'), 3000); }
+        function formatDateTimeLocal(isoString) { /* ... */ if (!isoString) return ''; try { const date = new Date(isoString); date.setMinutes(date.getMinutes() - date.getTimezoneOffset()); return date.toISOString().slice(0, 16); } catch (e) { return ''; } }
+        function formatCurrency(value) { return `R$ ${Number(value || 0).toFixed(2).replace('.', ',')}`; } // Formata para Real Brasileiro
+        // Função para criar ícones SVG
+        function createIcon(iconId, classes = "w-4 h-4") {
+             return `<svg class="${classes} inline-block"><use xlink:href="#icon-${iconId}"/></svg>`;
+        }
+        // Função para obter a última linha do interaction_history
+        function getLastInteraction(history) {
+            if (!history || typeof history !== 'string') return 'N/A';
+            const lines = history.trim().split('\n');
+            return lines[lines.length - 1] || 'N/A';
+        }
 
-            container.innerHTML += `
-                <div class="flex ${isAI ? 'justify-start' : 'justify-end'} mb-4">
-                    <div class="max-w-md p-3 rounded-lg ${isAI ? 'bg-secondary' : 'bg-primary text-primary-foreground'}">
-                        <p class="text-sm">${messageText}</p>
-                        <p class="text-xs opacity-70 mt-1 text-right">${new Date(msg.created_at).toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'})}</p>
+
+        // --- Funções de Modal (Refinadas) ---
+        function openModal(title, contentHtml, footerHtml) {
+            closeModal(); 
+            const modalId = `modal-${Date.now()}`;
+            const modalHtml = `
+                <div id="${modalId}" class="modal-backdrop">
+                    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="${modalId}-title">
+                        <div class="modal-header">
+                            <h2 id="${modalId}-title" class="modal-title">${title}</h2>
+                            <button class="modal-close-button" aria-label="Fechar">&times;</button>
+                        </div>
+                        <div class="modal-body">${contentHtml}</div>
+                        <div class="modal-footer">${footerHtml}</div>
                     </div>
-                </div>`;
-            container.scrollTop = container.scrollHeight;
-        }
-
-        // ===================================================================================
-        // VIEW: PERFIS DE IA
-        // ===================================================================================
-        async function loadPerfisData() {
-            renderTableSkeleton('perfis-table-body', 3);
-            const { data, error } = await supabase.rpc('get_profile_summaries');
-            if (error) {
-                // Heurística para detectar se a função não foi criada
-                if (error.code === '42883') { 
-                    throw new Error("A função 'get_profile_summaries' não foi encontrada. Verifique as instruções e execute o arquivo .sql no Supabase.");
-                }
-                throw error;
-            }
-            renderPerfisTable(data);
-        }
-
-        function renderPerfisTable(perfis) {
-            const tableBody = document.getElementById('perfis-table-body');
-            tableBody.innerHTML = '';
-            if (perfis.length === 0) {
-                tableBody.innerHTML = `<tr><td colspan="3" class="text-center p-8 text-muted-foreground">Nenhum perfil de IA encontrado.</td></tr>`;
-                return;
-            }
-            perfis.forEach(p => {
-                tableBody.innerHTML += `
-                    <tr class="table-row border-b border-border">
-                        <td class="p-4 font-mono text-xs">${p.client_id}</td>
-                        <td class="p-4 text-sm text-muted-foreground italic">${p.summary}</td>
-                        <td class="p-4 text-right"><button class="p-1 hover:text-blue-500" onclick="openEditProfileModal('${p.client_id}')"><i data-lucide="file-pen-line"></i></button><button class="p-1 hover:text-destructive" onclick="openDeleteModal('profile', '${p.client_id}')"><i data-lucide="trash-2"></i></button></td>
-                    </tr>`;
-            });
-            lucide.createIcons();
-        }
-        
-        // ===================================================================================
-        // VIEW: LEMBRETES
-        // ===================================================================================
-        async function loadLembretesData() {
-             renderTableSkeleton('lembretes-table-body', 5);
-             const { data, error } = await supabase.from('lembretes').select('*').order('send_at', { ascending: true });
-             if (error) throw error;
-             renderLembretesTable(data);
-        }
-
-        function renderLembretesTable(lembretes) {
-            const tableBody = document.getElementById('lembretes-table-body');
-            tableBody.innerHTML = '';
-            if (lembretes.length === 0) {
-                tableBody.innerHTML = `<tr><td colspan="5" class="text-center p-8 text-muted-foreground">Nenhum lembrete agendado.</td></tr>`;
-                return;
-            }
-            lembretes.forEach(l => {
-                const statusClass = l.status === 'enviado' ? 'bg-green-400 text-green-900' : (l.status === 'pendente' ? 'bg-yellow-400 text-yellow-900' : 'bg-red-400 text-red-900');
-                tableBody.innerHTML += `
-                    <tr class="table-row border-b border-border">
-                        <td class="p-4 font-mono text-xs">${l.user_jid}</td>
-                        <td class="p-4">${l.reminder_message}</td>
-                        <td class="p-4">${new Date(l.send_at).toLocaleString('pt-BR')}</td>
-                        <td class="p-4"><span class="px-2 py-1 rounded-full text-xs font-semibold ${statusClass}">${l.status}</span></td>
-                        <td class="p-4 text-right"><button class="p-1 hover:text-destructive" onclick="openDeleteModal('reminder', '${l.id}')"><i data-lucide="trash-2"></i></button></td>
-                    </tr>`;
-            });
-            lucide.createIcons();
-        }
-
-        // ===================================================================================
-        // LÓGICA DOS MODAIS E FORMULÁRIOS
-        // ===================================================================================
-        function setupSearchListeners() {
-            document.getElementById('user-search').addEventListener('input', e => {
-                const searchTerm = e.target.value.toLowerCase();
-                renderUsuariosTable(allUsersCache.filter(u => u.user_jid.toLowerCase().includes(searchTerm)));
-            });
-            document.getElementById('convo-search').addEventListener('input', e => {
-                const searchTerm = e.target.value.toLowerCase();
-                renderConversasList(convoUsersCache.filter(u => u.user_jid.toLowerCase().includes(searchTerm)));
-            });
-        }
-
-        function setupForms() {
-            document.getElementById('edit-user-form').addEventListener('submit', handleEditUserSubmit);
-            document.getElementById('edit-profile-form').addEventListener('submit', handleEditProfileSubmit);
-            document.getElementById('admin-message-form').addEventListener('submit', handleAdminMessageSend);
-        }
-        
-        async function openEditUserModal(userId) {
-            const { data, error } = await supabase.from('usuarios_planos').select('*').eq('user_jid', userId).single();
-            if (error) return showToast(`Erro ao buscar usuário: ${error.message}`, 'error');
+                </div>
+            `;
+            modalContainer.innerHTML = modalHtml;
+            modalContainer.classList.remove('hidden');
+            currentModal = modalContainer.querySelector('.modal-backdrop'); // Agora o backdrop é o wrapper
             
-            document.getElementById('modal-user-id').textContent = `ID: ${data.user_jid}`;
-            document.getElementById('plano').value = data.plano;
-            document.getElementById('contagem_diaria').value = data.contagem_diaria;
-            document.getElementById('edit-user-modal').classList.remove('hidden');
+            // Focar no primeiro elemento interativo ou no modal
+             const focusableElements = currentModal.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+             const firstFocusable = focusableElements.length > 0 ? focusableElements[0] : currentModal.querySelector('.modal');
+             if(firstFocusable) firstFocusable.focus();
+
+            // Adiciona listeners para fechar
+            currentModal.addEventListener('click', (event) => { if (event.target === currentModal) closeModal(); }); // Fechar ao clicar fora
+            currentModal.querySelector('.modal-close-button').addEventListener('click', closeModal);
+            document.addEventListener('keydown', handleEscKey);
         }
 
-        async function handleEditUserSubmit(e) {
-            e.preventDefault();
-            const userId = document.getElementById('modal-user-id').textContent.replace('ID: ', '');
-            const updatedData = {
-                plano: document.getElementById('plano').value,
-                contagem_diaria: parseInt(document.getElementById('contagem_diaria').value, 10)
-            };
-            const { error } = await supabase.from('usuarios_planos').update(updatedData).eq('user_jid', userId);
-            if (error) showToast(`Falha ao atualizar: ${error.message}`, 'error');
-            else showToast('Usuário atualizado com sucesso!', 'success');
-            closeModal('edit-user-modal');
+        function closeModal() {
+            if (currentModal) {
+                modalContainer.classList.add('hidden');
+                modalContainer.innerHTML = ''; 
+                currentModal = null;
+                document.removeEventListener('keydown', handleEscKey);
+            }
+        }
+        
+        function handleEscKey(event) { if (event.key === 'Escape') closeModal(); }
+
+        function openConfirmModal(title, message, onConfirm) {
+            const content = `<p>${message}</p>`;
+            const footer = `
+                <button id="confirm-cancel" class="button button-secondary">Cancelar</button>
+                <button id="confirm-ok" class="button button-danger">Confirmar</button>
+            `;
+            openModal(title, content, footer);
+            document.getElementById('confirm-cancel').addEventListener('click', closeModal);
+            document.getElementById('confirm-ok').addEventListener('click', async () => {
+                 const confirmButton = document.getElementById('confirm-ok');
+                 confirmButton.disabled = true;
+                 confirmButton.innerHTML = `<span class="inline-loader"></span> Confirmando...`; // Adiciona loader
+                 try {
+                     await onConfirm(); // Executa a ação
+                     // Não fecha aqui, a função onConfirm deve fechar ou recarregar
+                 } catch (e) {
+                     // Erro já tratado pela função onConfirm com showToast
+                      confirmButton.disabled = false; // Reabilita em caso de erro
+                      confirmButton.textContent = 'Confirmar';
+                 } 
+            });
         }
 
-        async function openEditProfileModal(clientId = null) {
-            const modal = document.getElementById('edit-profile-modal');
-            const form = document.getElementById('edit-profile-form');
-            form.reset();
-            document.getElementById('profile-original-id').value = '';
+        // --- Funções CRUD Específicas (Modals - Corrigidas) ---
 
-            if (clientId) { // Modo Edição
-                document.getElementById('profile-modal-title').textContent = 'Editar Perfil de IA';
-                const { data, error } = await supabase.from('clientprofile').select('*').eq('client_id', clientId).single();
-                if (error) return showToast(`Erro ao buscar perfil: ${error.message}`, 'error');
+        function openUserModal(user = null) {
+            // ... (código anterior do modal de usuário) ...
+            const isEditing = user !== null;
+            const title = isEditing ? 'Editar Usuário' : 'Novo Usuário';
+            const buttonText = isEditing ? 'Salvar Alterações' : 'Criar Usuário';
+            const content = `
+                <form id="user-form" class="space-y-4">
+                    <input type="hidden" id="user-id" value="${user?.id || ''}">
+                    <div><label for="user-full_name" class="block text-sm font-medium text-gray-700">Nome Completo</label><input type="text" id="user-full_name" value="${user?.full_name || ''}" required class="w-full mt-1 input-field"></div>
+                    <div><label for="user-whatsapp_jid" class="block text-sm font-medium text-gray-700">WhatsApp JID</label><input type="text" id="user-whatsapp_jid" value="${user?.whatsapp_jid || ''}" required placeholder="55...@s.whatsapp.net" class="w-full mt-1 input-field ${isEditing ? 'bg-gray-100 cursor-not-allowed' : ''}" ${isEditing ? 'readonly' : ''}></div>
+                    <div><label for="user-plan" class="block text-sm font-medium text-gray-700">Plano</label><select id="user-plan" class="w-full mt-1 input-field"><option value="GRATUITO" ${ (user?.plan || 'GRATUITO') === 'GRATUITO' ? 'selected' : '' }>GRATUITO</option><option value="PRO" ${ (user?.plan === 'PRO') ? 'selected' : '' }>PRO</option></select></div>
+                    <div><label for="user-perfil_json" class="block text-sm font-medium text-gray-700">Perfil JSON</label><textarea id="user-perfil_json" rows="6" class="w-full mt-1 input-field font-mono text-xs">${JSON.stringify(user?.perfil_json || {}, null, 2)}</textarea><p id="user-perfil_json-error" class="text-xs text-red-600 mt-1"></p></div>
+                </form>`;
+            const footer = `<button id="user-modal-cancel" class="button button-secondary">Cancelar</button><button id="user-modal-save" class="button button-primary">${buttonText}</button>`;
+            openModal(title, content, footer);
+            document.getElementById('user-modal-cancel').addEventListener('click', closeModal);
+            document.getElementById('user-modal-save').addEventListener('click', handleSaveUser);
+        }
+
+        async function handleSaveUser(event) {
+            // ... (código anterior com validação JID) ...
+            const button = event.target; button.disabled = true; button.innerHTML = `<span class="inline-loader"></span> Salvando...`;
+            const id = document.getElementById('user-id').value;
+            const fullName = document.getElementById('user-full_name').value;
+            const jid = document.getElementById('user-whatsapp_jid').value;
+            const plan = document.getElementById('user-plan').value;
+            const perfilJsonString = document.getElementById('user-perfil_json').value;
+            const perfilJsonError = document.getElementById('user-perfil_json-error'); perfilJsonError.textContent = '';
+            let perfilJson = null;
+            try { perfilJson = JSON.parse(perfilJsonString || '{}'); } catch (e) { perfilJsonError.textContent = 'JSON inválido.'; button.disabled = false; button.textContent = id ? 'Salvar Alterações' : 'Criar Usuário'; return; }
+            if (!jid || !/^\d+@s\.whatsapp\.net$/.test(jid)) { showToast('WhatsApp JID inválido (ex: 55119... @s.whatsapp.net)', 'error'); button.disabled = false; button.textContent = id ? 'Salvar Alterações' : 'Criar Usuário'; return; }
+            const userData = { full_name: fullName || null, whatsapp_jid: jid, plan: plan, perfil_json: perfilJson }; 
+            try {
+                if (id) { await updateUser(id, userData); showToast('Usuário atualizado!', 'success'); } 
+                else { await createUser(userData); showToast('Usuário criado!', 'success'); }
+                closeModal();
+                if (window.location.hash === '#users') renderUserList(); 
+                else if (window.location.hash === `#user-${jid}`) renderUserDetails(jid);
+            } catch (error) { showToast(`Erro: ${error.message}`, 'error'); button.disabled = false; button.textContent = id ? 'Salvar Alterações' : 'Criar Usuário'; }
+        }
+        
+        function openReminderModal(reminder = null) {
+             // ... (código anterior do modal de lembrete) ...
+            const isEditing = reminder !== null;
+            const title = isEditing ? 'Editar Lembrete' : 'Novo Lembrete';
+            const buttonText = isEditing ? 'Salvar Alterações' : 'Criar Lembrete';
+            const content = `<form id="reminder-form" class="space-y-4"><input type="hidden" id="reminder-id" value="${reminder?.id || ''}"><div><label for="reminder-profile_id" class="block text-sm font-medium text-gray-700">Usuário (JID)</label><input type="text" id="reminder-profile_id" value="${reminder?.profile_id || ''}" required placeholder="55...@s.whatsapp.net" class="w-full mt-1 input-field"></div><div><label for="reminder-message" class="block text-sm font-medium text-gray-700">Mensagem</label><textarea id="reminder-message" rows="3" required class="w-full mt-1 input-field">${reminder?.reminder_message || ''}</textarea></div><div><label for="reminder-event_timestamp" class="block text-sm font-medium text-gray-700">Data Evento</label><input type="datetime-local" id="reminder-event_timestamp" value="${formatDateTimeLocal(reminder?.event_timestamp)}" required class="w-full mt-1 input-field"></div>${isEditing ? `<div><label for="reminder-status" class="block text-sm font-medium text-gray-700">Status</label><select id="reminder-status" class="w-full mt-1 input-field"><option value="pendente" ${reminder?.status === 'pendente' ? 'selected' : ''}>Pendente</option><option value="enviado" ${reminder?.status === 'enviado' ? 'selected' : ''}>Enviado</option><option value="cancelado" ${reminder?.status === 'cancelado' ? 'selected' : ''}>Cancelado</option></select></div>` : ''}</form>`;
+            const footer = `<button id="reminder-modal-cancel" class="button button-secondary">Cancelar</button><button id="reminder-modal-save" class="button button-primary">${buttonText}</button>`;
+            openModal(title, content, footer);
+            document.getElementById('reminder-modal-cancel').addEventListener('click', closeModal);
+            document.getElementById('reminder-modal-save').addEventListener('click', handleSaveReminder);
+        }
+
+        async function handleSaveReminder(event) {
+            // ... (código anterior com validação JID) ...
+            const button = event.target; button.disabled = true; button.innerHTML = `<span class="inline-loader"></span> Salvando...`;
+            const id = document.getElementById('reminder-id').value;
+            const profileId = document.getElementById('reminder-profile_id').value;
+            const message = document.getElementById('reminder-message').value;
+            const eventTimestampLocal = document.getElementById('reminder-event_timestamp').value;
+            const status = document.getElementById('reminder-status')?.value; 
+            if (!profileId || !message || !eventTimestampLocal) { showToast('Preencha todos os campos obrigatórios.', 'error'); button.disabled = false; button.textContent = id ? 'Salvar Alterações' : 'Criar Lembrete'; return; }
+             if (!/^\d+@s\.whatsapp\.net$/.test(profileId)) { showToast('JID do usuário inválido.', 'error'); button.disabled = false; button.textContent = id ? 'Salvar Alterações' : 'Criar Lembrete'; return; }
+            try {
+                const eventTimestampISO = new Date(eventTimestampLocal).toISOString();
+                const eventDate = new Date(eventTimestampISO); const sendDate = new Date(eventDate.getTime()); sendDate.setHours(sendDate.getHours() - 2); const sendAtISO = sendDate.toISOString();
+                const reminderData = { profile_id: profileId, reminder_message: message, event_timestamp: eventTimestampISO, send_at: sendAtISO, status: id ? status : 'pendente' };
+                if (id) { await updateReminder(id, reminderData); showToast('Lembrete atualizado!', 'success'); } 
+                else { await createReminder(reminderData); showToast('Lembrete criado!', 'success'); }
+                closeModal();
+                renderReminderList(); 
+            } catch (error) { showToast(`Erro: ${error.message}`, 'error'); button.disabled = false; button.textContent = id ? 'Salvar Alterações' : 'Criar Lembrete'; }
+        }
+
+
+        // --- Renderização de Páginas (Corrigidas e com RMM) ---
+
+        /** RENDER: Dashboard (Com RMM - Corrigido) */
+        async function renderDashboard() { 
+             pageTitle.textContent = 'Dashboard'; 
+             showLoader(); 
+             try { 
+                 const a = await getAnalytics(); 
+                 const estimatedRMM = formatCurrency(a.proUsers * PRO_PLAN_PRICE); // Calcula e formata RMM
+                 // Código HTML corrigido, sem comentários e com classes corretas
+                 contentArea.innerHTML = `
+                    <div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-5"> 
+                        <div class="p-6 bg-white rounded-lg shadow"><h3 class="text-sm font-medium text-gray-500">Total Usuários</h3><p class="mt-2 text-3xl font-bold text-gray-900">${a.totalUsers}</p></div>
+                        <div class="p-6 bg-white rounded-lg shadow"><h3 class="text-sm font-medium text-gray-500">Usuários PRO</h3><p class="mt-2 text-3xl font-bold text-gray-900">${a.proUsers}</p></div>
+                        <div class="p-6 bg-white rounded-lg shadow"><h3 class="text-sm font-medium text-gray-500 flex items-center">${createIcon('dollar', 'w-4 h-4 mr-1 text-green-600')}RMM Estimada</h3><p class="mt-2 text-3xl font-bold text-green-700">${estimatedRMM}</p></div>
+                        <div class="p-6 bg-white rounded-lg shadow"><h3 class="text-sm font-medium text-gray-500">Mensagens (24h)</h3><p class="mt-2 text-3xl font-bold text-gray-900">${a.messagesToday}</p></div>
+                        <div class="p-6 bg-white rounded-lg shadow"><h3 class="text-sm font-medium text-gray-500">Lembretes Pend.</h3><p class="mt-2 text-3xl font-bold text-gray-900">${a.pendingReminders}</p></div>
+                    </div>`; 
+             } catch (error) { contentArea.innerHTML = `<p class="text-red-600">Erro dashboard: ${error.message}</p>`; }
+        }
+
+        /** RENDER: Lista de Usuários (Corrigida) */
+        let userListCache = []; 
+        async function renderUserList() {
+            pageTitle.textContent = 'Usuários';
+             pageActions.innerHTML = `<button id="new-user-button" class="button button-green">${createIcon('users', 'w-4 h-4 mr-1')} Novo Usuário</button>`;
+             document.getElementById('new-user-button').addEventListener('click', () => openUserModal());
+            showLoader();
+            try {
+                userListCache = await getUsers(); 
+                contentArea.innerHTML = `
+                    <div class="mb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                        <input type="text" id="user-search" placeholder="Buscar por nome ou JID..." class="w-full md:w-1/2 input-field">
+                        <select id="plan-filter" class="w-full md:w-auto input-field">
+                            <option value="">Todos Planos</option> <option value="PRO">PRO</option> <option value="GRATUITO">GRATUITO</option>
+                        </select>
+                    </div>
+                    <div class="overflow-x-auto bg-white rounded-lg shadow">
+                        <table class="min-w-full divide-y divide-gray-200"><thead class="bg-gray-50"><tr>
+                            <th class="table-header">Nome</th><th class="table-header">WhatsApp JID</th><th class="table-header">Plano</th><th class="table-header">Msg/Dia</th><th class="table-header">Última Interação</th><th class="table-header">Ações</th>
+                        </tr></thead><tbody id="user-table-body" class="bg-white divide-y divide-gray-200"></tbody></table>
+                    </div>`;
+                document.getElementById('user-search').addEventListener('input', applyUserFilters);
+                document.getElementById('plan-filter').addEventListener('change', applyUserFilters);
+                applyUserFilters(); // Renderiza a tabela inicial
+                 // Listener para botões de apagar (delegação)
+                 contentArea.addEventListener('click', event => {
+                     // Verifica se o clique foi no botão ou no ícone dentro dele
+                     const deleteButton = event.target.closest('.delete-user-button');
+                     if (deleteButton) handleDeleteUser(deleteButton); // Passa o botão
+                 });
+            } catch (error) { contentArea.innerHTML = `<p class="text-red-600">Erro usuários: ${error.message}</p>`; }
+        }
+
+        // Aplica filtros e renderiza linhas da tabela de usuários (Corrigida)
+        function applyUserFilters() { 
+            const searchTerm = document.getElementById('user-search').value.toLowerCase();
+            const planFilter = document.getElementById('plan-filter').value;
+            const tableBody = document.getElementById('user-table-body');
+            if (!tableBody) return; 
+            const filteredUsers = userListCache.filter(user => {
+                const nameMatch = user.full_name?.toLowerCase().includes(searchTerm) || false;
+                const jidMatch = user.whatsapp_jid?.toLowerCase().includes(searchTerm) || false;
+                const planMatch = !planFilter || (user.plan || 'GRATUITO') === planFilter; 
+                return (nameMatch || jidMatch) && planMatch;
+            });
+            // Adiciona a coluna Ações corretamente
+            tableBody.innerHTML = filteredUsers.length > 0 ? filteredUsers.map(user => `
+                <tr class="hover:bg-gray-50">
+                    <td class="table-cell"><a href="#user-${user.whatsapp_jid}" class="link">${user.full_name || 'N/A'}</a></td>
+                    <td class="table-cell">${user.whatsapp_jid}</td>
+                    <td class="table-cell">${renderPlanBadge(user.plan)}</td>
+                    <td class="table-cell">${user.daily_message_count || 0}</td>
+                    <td class="table-cell">${formatDate(user.last_seen_at)}</td>
+                    <td class="table-cell">
+                         <button data-id="${user.id}" data-jid="${user.whatsapp_jid}" class="delete-user-button text-red-600 hover:text-red-800 button-xs" title="Apagar Usuário">${createIcon('trash')}</button>
+                    </td>
+                </tr>`).join('') : `<tr><td colspan="6" class="table-cell text-center text-gray-500">Nenhum usuário encontrado.</td></tr>`;
+        }
+        
+         // Handler para apagar usuário (Corrigido para receber botão)
+         async function handleDeleteUser(button) {
+             const userId = button.dataset.id;
+             const userJid = button.dataset.jid;
+             openConfirmModal('Apagar Usuário', `Tem certeza que quer apagar ${userJid}? Todas as conversas e lembretes associados podem ser perdidos (dependendo da configuração do DB).`, async () => {
+                 showToast('Apagando...', 'info'); 
+                 try {
+                     await deleteUser(userId);
+                     showToast('Usuário apagado!', 'success');
+                      // Se estava na página de detalhes, volta para a lista
+                      if (window.location.hash.startsWith('#user-')) {
+                          window.location.hash = '#users';
+                      } else {
+                          renderUserList(); // Recarrega a lista
+                      }
+                 } catch (error) {
+                     showToast(`Erro: ${error.message}`, 'error');
+                 } finally {
+                     closeModal(); // Fecha confirmação
+                 }
+             });
+         }
+
+
+        /** RENDER: Detalhes do Usuário (Corrigida para usar interaction_history) */
+        async function renderUserDetails(jid) { 
+            pageTitle.textContent = 'Detalhes do Usuário';
+            showLoader();
+            try {
+                // Busca perfil que já contém interaction_history
+                const profile = await getUserProfile(jid); 
+                if (!profile) { contentArea.innerHTML = `<p class="text-red-600">Usuário não encontrado.</p><div class="mt-4"><a href="#users" class="link">&larr; Voltar para Usuários</a></div>`; return; }
                 
-                document.getElementById('profile-original-id').value = data.client_id;
-                document.getElementById('profile-client-id').value = data.client_id;
-                document.getElementById('profile-client-id').readOnly = true;
-                document.getElementById('modal-profile-json').value = data.perfil_json ? JSON.stringify(data.perfil_json, null, 2) : '';
-                document.getElementById('modal-profile-history').value = data.interaction_history || '';
-            } else { // Modo Criação
-                document.getElementById('profile-modal-title').textContent = 'Criar Novo Perfil de IA';
-                document.getElementById('profile-client-id').readOnly = false;
-            }
-            modal.classList.remove('hidden');
+                // Parseia o interaction_history para formato de chat (Lógica Aprimorada)
+                const chatHistoryHtml = (profile.interaction_history || '')
+                    .split('\n') // Divide por linhas
+                    .map(line => line.trim()) // Remove espaços extras
+                    .filter(line => line) // Remove linhas vazias
+                    .map(line => {
+                        let sender = 'Assistente M'; // Default para AI
+                        let content = line;
+                        let bubbleClass = 'chat-bubble-ai';
+
+                        // Tenta identificar o remetente pelo prefixo
+                        if (line.toLowerCase().startsWith('user:')) {
+                            sender = 'Cliente';
+                            content = line.substring(5).trim();
+                            bubbleClass = 'chat-bubble-user';
+                        } else if (line.toLowerCase().startsWith('ai:') || line.toLowerCase().startsWith('assistente m:')) {
+                            sender = 'Assistente M';
+                            // Remove prefixo se existir (opcional, pode deixar para clareza)
+                            if(line.toLowerCase().startsWith('ai:')) content = line.substring(3).trim();
+                            else if (line.toLowerCase().startsWith('assistente m:')) content = line.substring(13).trim();
+                            bubbleClass = 'chat-bubble-ai';
+                        }
+                        // Se não encontrar prefixo, assume que é AI (ou pode adaptar a lógica)
+
+                        // Renderiza a bolha de chat
+                        return `<div class="${bubbleClass} chat-bubble">
+                                    <div class="chat-sender">${sender}</div>
+                                    <p class="whitespace-pre-wrap">${content || ''}</p>
+                                </div>`;
+                    }).join('');
+                
+                let profileJsonString = "{}"; try { profileJsonString = JSON.stringify(profile.perfil_json || {}, null, 2); } catch(e) { profileJsonString = "\"Erro ao formatar JSON\""; }
+                
+                contentArea.innerHTML = `
+                    <div class="mb-4"><a href="#users" class="link">&larr; Voltar para Usuários</a></div>
+                    <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
+                        {/* Coluna Esquerda: Detalhes e Perfil JSON */}
+                        <div class="lg:col-span-1 space-y-6">
+                            <div class="p-6 bg-white rounded-lg shadow">
+                                <div class="flex justify-between items-start mb-2">
+                                     <div>
+                                         <h3 class="text-lg font-medium text-gray-900">${profile.full_name || 'Usuário sem nome'}</h3>
+                                         <p class="text-sm text-gray-600">${profile.whatsapp_jid}</p>
+                                     </div>
+                                     <button id="edit-user-button" class="button button-warning button-xs" title="Editar Usuário">${createIcon('edit')}</button>
+                                </div>
+                                <div class="mt-4">Plano Atual: ${renderPlanBadge(profile.plan)}</div>
+                                <div class="mt-4">
+                                     <button id="delete-user-detail-button" data-id="${profile.id}" data-jid="${profile.whatsapp_jid}" class="w-full button button-danger">${createIcon('trash', 'w-4 h-4 mr-1')} Apagar Usuário</button>
+                                </div>
+                            </div>
+                            <div class="p-6 bg-white rounded-lg shadow">
+                                <div class="flex justify-between items-center mb-2">
+                                    <h3 class="text-lg font-medium text-gray-900">Perfil JSON</h3>
+                                    <button id="save-perfil-json-button" data-id="${profile.id}" class="button button-primary button-xs">Salvar JSON</button>
+                                </div>
+                                <textarea id="perfil-json-textarea" rows="10" class="w-full p-2 mt-2 text-xs font-mono text-gray-700 bg-gray-50 rounded-md border border-gray-300 focus:ring-blue-500 focus:border-blue-500">${profileJsonString}</textarea>
+                                <p id="perfil-json-error" class="text-xs text-red-600 mt-1"></p>
+                            </div>
+                        </div>
+                        {/* Coluna Direita: Histórico de Interação */}
+                        <div class="lg:col-span-2 space-y-6">
+                            <div class="p-6 bg-white rounded-lg shadow">
+                                <h3 class="text-lg font-medium text-gray-900">Histórico de Interação</h3>
+                                <div class="mt-4 flex flex-col space-y-2 overflow-y-auto h-[600px] p-4 bg-gray-50 rounded-md border">
+                                    ${chatHistoryHtml || '<p class="text-gray-500">Nenhuma interação registada.</p>'}
+                                </div>
+                            </div>
+                        </div>
+                    </div>`;
+                document.getElementById('edit-user-button').addEventListener('click', () => openUserModal(profile));
+                document.getElementById('delete-user-detail-button').addEventListener('click', (e) => handleDeleteUser(e.target.closest('button'))); // Garante pegar o botão
+                document.getElementById('save-perfil-json-button').addEventListener('click', handleSavePerfilJson);
+            } catch (error) { contentArea.innerHTML = `<p class="text-red-600">Erro detalhes usuário: ${error.message}</p>`; }
+        }
+        
+         // Handler para salvar JSON (Corrigido)
+         async function handleSavePerfilJson(event) {
+             const button = event.target;
+             const userId = button.dataset.id;
+             const textarea = document.getElementById('perfil-json-textarea');
+             const errorP = document.getElementById('perfil-json-error');
+             const jsonString = textarea.value;
+             errorP.textContent = '';
+             button.disabled = true;
+              button.innerHTML = `<span class="inline-loader"></span> Salvando...`;
+
+             try {
+                 const perfilJson = JSON.parse(jsonString || '{}'); 
+                 await updateUser(userId, { perfil_json: perfilJson }); 
+                 showToast('Perfil JSON salvo!', 'success');
+             } catch (e) {
+                 errorP.textContent = 'JSON inválido.';
+                 showToast('Erro: JSON inválido.', 'error');
+             } finally {
+                  button.disabled = false;
+                  button.textContent = 'Salvar JSON';
+             }
+         }
+
+
+        /** RENDER: Lista de Lembretes (Corrigida) */
+        let reminderListCache = []; 
+        async function renderReminderList() {
+             pageTitle.textContent = 'Lembretes Agendados';
+             pageActions.innerHTML = `<button id="new-reminder-button" class="button button-green">${createIcon('clock', 'w-4 h-4 mr-1')} Novo Lembrete</button>`;
+             document.getElementById('new-reminder-button').addEventListener('click', () => openReminderModal());
+             showLoader();
+            try {
+                reminderListCache = await getReminders();
+                contentArea.innerHTML = `
+                    <div class="mb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                        <input type="text" id="reminder-search" placeholder="Buscar por JID ou mensagem..." class="w-full md:w-1/2 input-field">
+                        <select id="status-filter" class="w-full md:w-auto input-field">
+                            <option value="">Todos Status</option><option value="pendente">Pendente</option><option value="enviado">Enviado</option><option value="cancelado">Cancelado</option>
+                        </select>
+                    </div>
+                    <div class="overflow-x-auto bg-white rounded-lg shadow">
+                         <table class="min-w-full divide-y divide-gray-200"><thead class="bg-gray-50"><tr>
+                            <th class="table-header">Usuário (JID)</th><th class="table-header">Mensagem</th><th class="table-header">Data Evento</th><th class="table-header">Status</th><th class="table-header">Ações</th>
+                         </tr></thead><tbody id="reminder-table-body" class="bg-white divide-y divide-gray-200"></tbody></table>
+                    </div>`;
+                document.getElementById('reminder-search').addEventListener('input', applyReminderFilters);
+                document.getElementById('status-filter').addEventListener('change', applyReminderFilters);
+                applyReminderFilters(); // Render inicial
+                 // Listeners para botões (delegação)
+                contentArea.addEventListener('click', event => {
+                     const editButton = event.target.closest('.edit-reminder-button');
+                     const deleteButton = event.target.closest('.delete-reminder-button');
+                     if (editButton) handleEditReminder(editButton);
+                     if (deleteButton) handleDeleteReminder(deleteButton);
+                 });
+            } catch (error) { contentArea.innerHTML = `<p class="text-red-600">Erro lembretes: ${error.message}</p>`; }
         }
 
-        async function handleEditProfileSubmit(e) {
-            e.preventDefault();
-            const originalId = document.getElementById('profile-original-id').value;
-            const clientId = document.getElementById('profile-client-id').value.trim();
-            if (!clientId) return showToast('O Client ID (JID) é obrigatório.', 'error');
-            
-            let perfilJson;
-            try {
-                const jsonText = document.getElementById('modal-profile-json').value;
-                perfilJson = jsonText.trim() ? JSON.parse(jsonText) : null;
-            } catch (err) {
-                return showToast('O Perfil JSON contém um formato inválido.', 'error');
-            }
-
-            const profileData = {
-                client_id: clientId,
-                perfil_json: perfilJson,
-                interaction_history: document.getElementById('modal-profile-history').value.trim()
-            };
-
-            let error;
-            if (originalId) { // Atualizar
-                const { error: updateError } = await supabase.from('clientprofile').update(profileData).eq('client_id', originalId);
-                error = updateError;
-            } else { // Inserir
-                const { error: insertError } = await supabase.from('clientprofile').insert(profileData);
-                error = insertError;
-            }
-
-            if (error) showToast(`Falha ao salvar perfil: ${error.message}`, 'error');
-            else showToast('Perfil salvo com sucesso!', 'success');
-            closeModal('edit-profile-modal');
+        // Aplica filtros e renderiza linhas da tabela de lembretes (Corrigida)
+        function applyReminderFilters() { 
+             const searchTerm = document.getElementById('reminder-search').value.toLowerCase();
+             const statusFilter = document.getElementById('status-filter').value;
+             const tableBody = document.getElementById('reminder-table-body');
+             if (!tableBody) return;
+             const filteredReminders = reminderListCache.filter(r => {
+                 const jidMatch = r.profile_id?.toLowerCase().includes(searchTerm) || false;
+                 const messageMatch = r.reminder_message?.toLowerCase().includes(searchTerm) || false;
+                 const statusMatch = !statusFilter || (r.status || 'desconhecido') === statusFilter;
+                 return (jidMatch || messageMatch) && statusMatch;
+             });
+             tableBody.innerHTML = filteredReminders.length > 0 ? filteredReminders.map(r => `
+                 <tr class="hover:bg-gray-50">
+                     <td class="table-cell"><a href="#user-${r.profile_id}" class="link">${r.profile_id}</a></td>
+                     <td class="table-cell-wrap max-w-md" title="${r.reminder_message}">${r.reminder_message}</td>
+                     <td class="table-cell">${formatDate(r.event_timestamp)}</td>
+                     <td class="table-cell">${renderStatusBadge(r.status)}</td>
+                     <td class="table-cell space-x-2 whitespace-nowrap">
+                          <button data-id="${r.id}" class="edit-reminder-button text-yellow-600 hover:text-yellow-800 button-xs" title="Editar Lembrete">${createIcon('edit')}</button>
+                          <button data-id="${r.id}" class="delete-reminder-button text-red-600 hover:text-red-800 button-xs" title="Apagar Lembrete">${createIcon('trash')}</button>
+                     </td>
+                 </tr>`).join('') : `<tr><td colspan="5" class="table-cell text-center text-gray-500">Nenhum lembrete encontrado.</td></tr>`;
         }
+        
+         // Handler para editar lembrete (Corrigido para receber botão)
+         function handleEditReminder(button) {
+             const reminderId = button.dataset.id;
+             const reminder = reminderListCache.find(r => r.id == reminderId); 
+             if (reminder) openReminderModal(reminder);
+             else showToast('Lembrete não encontrado.', 'error');
+         }
+         
+         // Handler para apagar lembrete (Corrigido para receber botão)
+         async function handleDeleteReminder(button) {
+             const reminderId = button.dataset.id;
+             openConfirmModal('Apagar Lembrete', `Tem certeza que quer apagar o lembrete ID ${reminderId}?`, async () => {
+                 showToast('Apagando...', 'info');
+                 try {
+                     await deleteReminder(reminderId);
+                     showToast('Lembrete apagado!', 'success');
+                     renderReminderList(); 
+                 } catch (error) {
+                     showToast(`Erro: ${error.message}`, 'error');
+                 } finally {
+                    closeModal(); // Fecha confirmação
+                 }
+             });
+         }
 
-        async function handleAdminMessageSend(e) {
-            e.preventDefault();
-            if (N8N_ADMIN_WEBHOOK_URL.includes('COLE_AQUI')) {
-                return showToast('Webhook de admin não configurado.', 'error');
-            }
-            const input = document.getElementById('admin-message-input');
-            const message = input.value.trim();
-            if (!message || !selectedChatUserId) return;
 
-            const button = e.target.querySelector('button');
-            const originalButtonContent = button.innerHTML;
-            button.disabled = true;
-            button.innerHTML = `<i data-lucide="loader-circle" class="animate-spin"></i>`;
-            lucide.createIcons();
-            
+        /** RENDER: Lista de Conversas (Modificada para usar interaction_history) */
+        let interactionHistoryCache = []; // Agora armazena perfis
+        async function renderConversationList() {
+            pageTitle.textContent = 'Histórico de Interações';
+            pageActions.innerHTML = ''; // Nenhuma ação nesta página
+            showLoader();
             try {
-                const response = await fetch(N8N_ADMIN_WEBHOOK_URL, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ remoteJid: selectedChatUserId, messageText: message })
-                });
-                if (!response.ok) throw new Error(`Servidor respondeu com status ${response.status}`);
-                input.value = '';
+                // Busca todos os perfis, focando no interaction_history
+                interactionHistoryCache = await getUsersWithHistory(); 
+
+                 contentArea.innerHTML = `
+                    <div class="mb-4">
+                        <input type="text" id="convo-search" placeholder="Buscar por JID, Nome ou Interação..." class="w-full md:w-1/2 input-field">
+                    </div>
+                    <div class="overflow-x-auto bg-white rounded-lg shadow">
+                         <table class="min-w-full divide-y divide-gray-200"><thead class="bg-gray-50"><tr>
+                            <th class="table-header">Usuário (JID)</th>
+                            <th class="table-header">Nome</th>
+                            <th class="table-header">Última Interação</th>
+                            <th class="table-header">Data Última Interação</th>
+                         </tr></thead><tbody id="convo-table-body" class="bg-white divide-y divide-gray-200"></tbody></table>
+                    </div>`;
+                 document.getElementById('convo-search').addEventListener('input', applyConversationFilters);
+                 applyConversationFilters(); // Render inicial
             } catch (error) {
-                showToast(`Erro ao enviar mensagem: ${error.message}`, 'error');
-            } finally {
-                button.disabled = false;
-                button.innerHTML = originalButtonContent;
-                lucide.createIcons();
+                 contentArea.innerHTML = `<p class="text-red-600">Erro ao carregar interações: ${error.message}</p>`;
             }
-        }
-
-        function openDeleteModal(type, id) {
-            const modal = document.getElementById('delete-confirm-modal');
-            const textEl = document.getElementById('delete-confirm-text');
-            const btn = document.getElementById('confirm-delete-btn');
-            
-            if (type === 'user') {
-                textEl.innerHTML = `Excluir o usuário <strong class="font-mono">${id}</strong>? Esta ação é irreversível.`;
-                btn.onclick = () => deleteData('usuarios_planos', 'user_jid', id, 'Usuário');
-            } else if (type === 'profile') {
-                textEl.innerHTML = `Excluir o perfil de <strong class="font-mono">${id}</strong>?`;
-                btn.onclick = () => deleteData('clientprofile', 'client_id', id, 'Perfil');
-            } else if (type === 'reminder') {
-                 textEl.innerHTML = `Excluir este lembrete?`;
-                 btn.onclick = () => deleteData('lembretes', 'id', id, 'Lembrete');
-            }
-            modal.classList.remove('hidden');
-        }
-
-        async function deleteData(table, column, id, name) {
-            const { error } = await supabase.from(table).delete().eq(column, id);
-            if (error) showToast(`Erro ao excluir ${name}: ${error.message}`, 'error');
-            else showToast(`${name} excluído com sucesso!`, 'success');
-            closeModal('delete-confirm-modal');
         }
         
-        function closeModal(modalId) { document.getElementById(modalId).classList.add('hidden'); }
-        
-        // ===================================================================================
-        // FUNÇÕES UTILITÁRIAS
-        // ===================================================================================
-        function showToast(message, type = 'success') {
-            const container = document.getElementById('toast-container');
-            const toast = document.createElement('div');
-            toast.className = `toast toast-${type}`;
-            toast.innerHTML = `<i data-lucide="${type === 'success' ? 'check-circle' : 'alert-circle'}" class="mr-2"></i> ${message}`;
-            container.appendChild(toast);
-            lucide.createIcons();
-            setTimeout(() => toast.classList.add('show'), 10);
-            setTimeout(() => {
-                toast.classList.remove('show');
-                toast.addEventListener('transitionend', () => toast.remove());
-            }, 3000);
+        // Aplica filtros e renderiza linhas da tabela de interações
+        function applyConversationFilters() {
+             const searchTerm = document.getElementById('convo-search').value.toLowerCase();
+             const tableBody = document.getElementById('convo-table-body');
+             if (!tableBody) return;
+
+             const filteredProfiles = interactionHistoryCache.filter(p => {
+                 const jidMatch = p.whatsapp_jid?.toLowerCase().includes(searchTerm) || false;
+                 const nameMatch = p.full_name?.toLowerCase().includes(searchTerm) || false;
+                 const historyMatch = p.interaction_history?.toLowerCase().includes(searchTerm) || false;
+                 return jidMatch || nameMatch || historyMatch;
+             });
+
+             tableBody.innerHTML = filteredProfiles.length > 0 ? filteredProfiles.map(p => {
+                 const lastInteraction = getLastInteraction(p.interaction_history);
+                 const shortInteraction = lastInteraction.length > 100 ? lastInteraction.substring(0, 97) + '...' : lastInteraction;
+
+                 return `<tr class="hover:bg-gray-50">
+                     <td class="table-cell"><a href="#user-${p.whatsapp_jid}" class="link">${p.whatsapp_jid || 'N/A'}</a></td>
+                     <td class="table-cell">${p.full_name || 'N/A'}</td>
+                     <td class="table-cell-wrap max-w-lg" title="${lastInteraction}">${shortInteraction}</td>
+                     <td class="table-cell">${formatDate(p.last_seen_at)}</td> {/* Usa last_seen_at como referência */}
+                 </tr>`
+             }).join('') : `<tr><td colspan="4" class="table-cell text-center text-gray-500">Nenhuma interação encontrada.</td></tr>`;
         }
 
-        function renderTableSkeleton(tbodyId, columns, rows = 5) {
-            const tableBody = document.getElementById(tbodyId);
-            let skeletonHTML = '';
-            for (let i = 0; i < rows; i++) {
-                skeletonHTML += `<tr class="border-b border-border">${Array(columns).fill('<td class="p-4"><div class="h-5 w-full skeleton rounded-md"></div></td>').join('')}</tr>`;
-            }
-            tableBody.innerHTML = skeletonHTML;
+        // --- Camada de Dados (Corrigida para CRUD) ---
+
+        /** DADOS: Analytics (Revisado com RMM) */
+        async function getAnalytics() { 
+             if (USE_MOCK_DATA || !supabaseClient) { /* ... mock ... */ const tU = mockData.users.length; const pU = mockData.users.filter(u => u.plan === 'PRO').length; const mT = mockData.users.reduce((s, u) => s + (u.daily_message_count || 0), 0); const pR = mockData.reminders.filter(r => r.status === 'pendente').length; return { totalUsers: tU, proUsers: pU, messagesToday: mT, pendingReminders: pR }; }
+             try { 
+                const [usersCountRes, proCountRes, remindersCountRes, messagesCountRes] = await Promise.all([ 
+                    supabaseClient.from('m_assistente_profiles').select('*', { count: 'exact', head: true }), 
+                    supabaseClient.from('m_assistente_profiles').select('*', { count: 'exact', head: true }).eq('plan', 'PRO'), 
+                    supabaseClient.from('m_assistente_reminders').select('*', { count: 'exact', head: true }).eq('status', 'pendente'), 
+                    // Aproximação: Soma das contagens diárias para "Mensagens (24h)"
+                    supabaseClient.rpc('sum_daily_messages') // Supõe uma função RPC 'sum_daily_messages' no Supabase
+                ]);
+                const getCount = (res) => { if (res.error && res.status !== 406) throw res.error; return res.count || 0; }; 
+                const getMessagesSum = (res) => { if (res.error) throw res.error; return res.data || 0; }
+
+                // Se a função RPC não existir, fazemos a soma no JS (menos eficiente)
+                let messagesTodaySum = 0;
+                 if (messagesCountRes.error) { // Fallback se RPC falhar
+                     console.warn("Função RPC 'sum_daily_messages' não encontrada ou falhou. Calculando no cliente.");
+                     const { data: usersData, error: usersError } = await supabaseClient.from('m_assistente_profiles').select('daily_message_count');
+                     if (usersError) throw usersError;
+                     messagesTodaySum = (usersData || []).reduce((sum, user) => sum + (user.daily_message_count || 0), 0);
+                 } else {
+                     messagesTodaySum = getMessagesSum(messagesCountRes);
+                 }
+
+                
+                return { 
+                    totalUsers: getCount(usersCountRes), 
+                    proUsers: getCount(proCountRes), 
+                    messagesToday: messagesTodaySum, // Usa a soma
+                    pendingReminders: getCount(remindersCountRes) 
+                };
+             } catch (error) { console.error("Erro analytics:", error); throw new Error(`Falha analytics: ${error.message}`); }
+        } /* É necessário criar a função RPC `sum_daily_messages` no Supabase:
+             CREATE OR REPLACE FUNCTION sum_daily_messages()
+             RETURNS integer AS $$
+             DECLARE
+               total_sum integer;
+             BEGIN
+               SELECT COALESCE(SUM(daily_message_count), 0)
+               INTO total_sum
+               FROM m_assistente_profiles;
+               RETURN total_sum;
+             END;
+             $$ LANGUAGE plpgsql;
+          */
+
+        /** DADOS: Lista de Usuários (Revisado) */
+        async function getUsers() { 
+             if (USE_MOCK_DATA || !supabaseClient) return structuredClone(mockData.users); 
+             try { const { data, error } = await supabaseClient.from('m_assistente_profiles').select('*').order('last_seen_at', { ascending: false }); if (error) throw error; return data || []; } catch (error) { console.error("Erro getUsers:", error); throw new Error(`Falha getUsers: ${error.message}`); }
         }
+
+        /** DADOS: Detalhes do Usuário (Modificado para pegar apenas perfil) */
+        async function getUserProfile(jid) { 
+             if (USE_MOCK_DATA || !supabaseClient) { const p = mockData.users.find(u => u.whatsapp_jid === jid); return structuredClone(p); } 
+             try { 
+                 const { data, error } = await supabaseClient.from('m_assistente_profiles').select('*').eq('whatsapp_jid', jid).single();
+                 if (error && error.code !== 'PGRST116') { // Ignora erro "No rows found"
+                     throw error;
+                 }
+                 return data; // Pode ser null se não encontrar
+             } catch (error) { console.error(`Erro getUserProfile ${jid}:`, error); throw new Error(`Falha getUserProfile: ${error.message}`); }
+        }
+        
+        /** DADOS: Lista de Lembretes (Revisado) */
+        async function getReminders() { 
+             if (USE_MOCK_DATA || !supabaseClient) return structuredClone(mockData.reminders).sort((a,b) => new Date(b.event_timestamp) - new Date(a.event_timestamp)); 
+             try { const { data, error } = await supabaseClient.from('m_assistente_reminders').select('*').order('event_timestamp', { ascending: false }).limit(100); if (error) throw error; return data || []; } catch (error) { console.error("Erro getReminders:", error); throw new Error(`Falha getReminders: ${error.message}`); }
+        }
+        
+         /** DADOS: Lista de Perfis com Histórico (NOVO para aba Conversas) */
+         async function getUsersWithHistory() {
+             if (USE_MOCK_DATA || !supabaseClient) {
+                  // Simula a busca, ordenando por last_seen_at
+                  return structuredClone(mockData.users).sort((a,b) => new Date(b.last_seen_at) - new Date(a.last_seen_at));
+             }
+             try {
+                 // Seleciona apenas os campos necessários e ordena
+                 const { data, error } = await supabaseClient
+                     .from('m_assistente_profiles')
+                     .select('id, whatsapp_jid, full_name, interaction_history, last_seen_at')
+                     .order('last_seen_at', { ascending: false }) 
+                     .limit(200); // Limita os últimos 200 atualizados
+                 if (error) throw error;
+                 return data || [];
+             } catch (error) {
+                 console.error("Erro getUsersWithHistory:", error);
+                 throw new Error(`Falha getUsersWithHistory: ${error.message}`);
+             }
+         }
+
+        // --- Ações CRUD (Corrigidas) ---
+
+        /** AÇÃO: Criar Usuário */
+        async function createUser(userData) {
+             if (USE_MOCK_DATA || !supabaseClient) { const newUser = { ...userData, id: nextMockUserId++, created_at: new Date().toISOString(), last_seen_at: new Date().toISOString(), daily_message_count: 0, summarized_at: null, interaction_history: null }; mockData.users.push(newUser); console.log("Mock createUser:", newUser); return true; }
+             try { 
+                 const dataToInsert = { ...userData, daily_message_count: 0, };
+                 const { error } = await supabaseClient.from('m_assistente_profiles').insert([dataToInsert]).select(); 
+                 if (error) throw error; 
+                 return true; 
+             } catch (error) { console.error("Erro createUser:", error); throw new Error(error.message); }
+        }
+
+        /** AÇÃO: Atualizar Usuário */
+        async function updateUser(userId, updateData) {
+            if (USE_MOCK_DATA || !supabaseClient) { const i = mockData.users.findIndex(u => u.id == userId); if (i > -1) { mockData.users[i] = { ...mockData.users[i], ...updateData }; console.log("Mock updateUser:", mockData.users[i]); return true; } return false; }
+            try { const d = { ...updateData }; delete d.whatsapp_jid; delete d.id; const { error } = await supabaseClient.from('m_assistente_profiles').update(d).eq('id', userId); if (error) throw error; return true; } catch (error) { console.error("Erro updateUser:", error); throw new Error(error.message); }
+        }
+
+        /** AÇÃO: Apagar Usuário */
+        async function deleteUser(userId) {
+            if (USE_MOCK_DATA || !supabaseClient) { const l = mockData.users.length; mockData.users = mockData.users.filter(u => u.id != userId); console.log("Mock deleteUser:", userId); return mockData.users.length < l; }
+            try { console.warn("A apagar usuário ID:", userId, " - Lembre-se de configurar exclusão em cascata no Supabase ou apagar dados relacionados manualmente."); const { error } = await supabaseClient.from('m_assistente_profiles').delete().eq('id', userId); if (error) throw error; return true; } catch (error) { console.error("Erro deleteUser:", error); throw new Error(error.message); }
+        }
+        
+        /** AÇÃO: Criar Lembrete */
+        async function createReminder(reminderData) {
+            if (USE_MOCK_DATA || !supabaseClient) { const newR = { ...reminderData, id: nextMockReminderId++, created_at: new Date().toISOString() }; mockData.reminders.push(newR); console.log("Mock createReminder:", newR); return true; }
+            try { const { error } = await supabaseClient.from('m_assistente_reminders').insert([reminderData]); if (error) throw error; return true; } catch (error) { console.error("Erro createReminder:", error); throw new Error(error.message); }
+        }
+
+        /** AÇÃO: Atualizar Lembrete */
+        async function updateReminder(reminderId, updateData) {
+            if (USE_MOCK_DATA || !supabaseClient) { const i = mockData.reminders.findIndex(r => r.id == reminderId); if (i > -1) { mockData.reminders[i] = { ...mockData.reminders[i], ...updateData }; console.log("Mock updateReminder:", mockData.reminders[i]); return true; } return false; }
+            try { const d = { ...updateData }; delete d.id; const { error } = await supabaseClient.from('m_assistente_reminders').update(d).eq('id', reminderId); if (error) throw error; return true; } catch (error) { console.error("Erro updateReminder:", error); throw new Error(error.message); }
+        }
+
+        /** AÇÃO: Apagar Lembrete */
+        async function deleteReminder(reminderId) {
+            if (USE_MOCK_DATA || !supabaseClient) { const l = mockData.reminders.length; mockData.reminders = mockData.reminders.filter(r => r.id != reminderId); console.log("Mock deleteReminder:", reminderId); return mockData.reminders.length < l; }
+            try { const { error } = await supabaseClient.from('m_assistente_reminders').delete().eq('id', reminderId); if (error) throw error; return true; } catch (error) { console.error("Erro deleteReminder:", error); throw new Error(error.message); }
+        }
+
+        // --- Inicialização ---
+        function initializeApp() {
+            // Aplica estilos SVG dinamicamente para usar <use xlink:href>
+             const svgIconsStyle = document.createElement("style");
+             svgIconsStyle.textContent = `.icon { width: 1.25em; height: 1.25em; display: inline-block; vertical-align: middle; }`;
+             document.head.appendChild(svgIconsStyle);
+            // Adiciona a classe base para inputs/tabelas se não existir
+            if (!document.getElementById('base-styles')) {
+                 const baseStyles = document.createElement("style");
+                 baseStyles.id = 'base-styles';
+                 baseStyles.textContent = `
+                    /* Estilos base reutilizáveis aqui */
+                 `;
+                 document.head.appendChild(baseStyles);
+            }
+        }
+        initializeApp();
+
     </script>
 </body>
 </html>
+
